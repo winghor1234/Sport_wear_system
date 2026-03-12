@@ -1,0 +1,252 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model Employee {
+  employee_id   String      @id @default(uuid())
+  employee_name String
+  gender        String?
+  phone         String
+  address       String?
+  position      String?
+  username      String   @unique
+  password      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  purchases     PurchaseOrder[]
+  imports       Import[]
+  sales         Sale[]
+}
+
+model Category {
+  category_id   String      @id @default(uuid())
+  category_name String
+  description   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products      Product[]
+}
+
+model Product {
+  product_id    String      @id @default(uuid())
+  product_name  String
+  price         Float
+  stock_qty     Int
+  description   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  category_id   String
+  category      Category @relation(fields: [category_id], references: [category_id])
+
+  purchase_details PurchaseDetail[]
+  import_details   ImportDetail[]
+  order_details    OrderDetail[]
+  sale_details     SaleDetail[]
+
+  @@index([category_id])
+}
+
+model Customer {
+  customer_id   String      @id @default(uuid())
+  customer_name String
+  phone         String
+  address       String?
+  email         String?
+  point         Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders        Order[]
+  sales         Sale[]
+  points        Point[]
+}
+
+model Supplier {
+  supplier_id   String      @id @default(uuid())
+  supplier_name String
+  phone         String
+  address       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  purchase_orders PurchaseOrder[]
+}
+
+model PurchaseOrder {
+  purchase_id   String      @id @default(uuid())
+  purchase_date DateTime @default(now())
+  total_amount  Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  supplier_id   String
+  employee_id   String
+
+  supplier      Supplier @relation(fields: [supplier_id], references: [supplier_id])
+  employee      Employee @relation(fields: [employee_id], references: [employee_id])
+
+  purchase_details PurchaseDetail[]
+  imports          Import[]
+
+  @@index([supplier_id])
+  @@index([employee_id])
+}
+
+model PurchaseDetail {
+  purchase_detail_id String @id @default(uuid())
+  quantity           Int
+  price              Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  purchase_id String
+  product_id  String
+
+  purchase PurchaseOrder @relation(fields: [purchase_id], references: [purchase_id])
+  product  Product       @relation(fields: [product_id], references: [product_id])
+
+  @@index([purchase_id])
+  @@index([product_id])
+
+}
+
+model Import {
+  import_id   String      @id @default(uuid())
+  import_date DateTime @default(now())
+  purchase_id String
+  employee_id String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  purchase PurchaseOrder @relation(fields: [purchase_id], references: [purchase_id])
+  employee Employee      @relation(fields: [employee_id], references: [employee_id])
+
+  import_details ImportDetail[]
+}
+
+model ImportDetail {
+  import_detail_id String @id @default(uuid())
+  quantity         Int
+  cost_price       Float
+  import_id String
+  product_id String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  import  Import  @relation(fields: [import_id], references: [import_id])
+  product Product @relation(fields: [product_id], references: [product_id])
+}
+
+model Order {
+  order_id     String      @id @default(uuid())
+  order_date   DateTime @default(now())
+  status String @default("pending")
+  total_amount Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  customer_id  String
+
+  customer Customer @relation(fields: [customer_id], references: [customer_id])
+
+  order_details OrderDetail[]
+  payment       Payment?
+  delivery      Delivery?
+
+  @@index([customer_id])
+}
+
+model OrderDetail {
+  order_detail_id String @id @default(uuid())
+  quantity        Int
+  price           Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order_id  String
+  product_id String
+
+  order   Order   @relation(fields: [order_id], references: [order_id])
+  product Product @relation(fields: [product_id], references: [product_id])
+}
+
+model Sale {
+  sale_id      String      @id @default(uuid())
+  sale_date    DateTime @default(now())
+  total_amount Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employee_id  String
+  customer_id  String?
+
+  employee Employee @relation(fields: [employee_id], references: [employee_id])
+  customer Customer? @relation(fields: [customer_id], references: [customer_id])
+
+  sale_details SaleDetail[]
+}
+
+model SaleDetail {
+  sale_detail_id String @id @default(uuid())
+  quantity       Int
+  price          Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sale_id  String
+  product_id String
+
+  sale    Sale    @relation(fields: [sale_id], references: [sale_id])
+  product Product @relation(fields: [product_id], references: [product_id])
+}
+
+model Payment {
+  payment_id   String      @id @default(uuid())
+  payment_date DateTime @default(now())
+  amount       Float
+  method       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order_id String @unique
+
+  order Order @relation(fields: [order_id], references: [order_id])
+}
+
+model Delivery {
+  delivery_id String @id @default(uuid())
+  address     String
+  status      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order_id String @unique
+
+  order Order @relation(fields: [order_id], references: [order_id])
+}
+
+model Point {
+  point_id     String      @id @default(uuid())
+  point_amount Int
+  date         DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  customer_id String
+
+  customer Customer @relation(fields: [customer_id], references: [customer_id])
+}
