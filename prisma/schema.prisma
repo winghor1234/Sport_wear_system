@@ -14,51 +14,75 @@ datasource db {
 
 
 model Employee {
-  employee_id   String      @id @default(uuid())
+  employee_id   String        @id @default(uuid())
   employee_name String
   gender        String?
-  email         String  @unique
+  email         String        @unique
   phone         String
   address       String?
   position      String?
   password      String
-  role          EmployeeRole @default(STAFF)
+  role          Role  @default(STAFF)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  isActive      Boolean  @default(true)
+
+  isActive      Boolean       @default(true)
   lastLogin     DateTime?
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   purchases     PurchaseOrder[]
   imports       Import[]
   sales         Sale[]
+  RefreshTokens RefreshToken[]
+
+
+
+  @@index([email])
 }
 
-enum EmployeeRole {
+enum Role {
   ADMIN
   STAFF
-}
-
-model PasswordOTP {
-  otp_id     String   @id @default(uuid())
-  email      String
-  otp_code   String
-  expiresAt  DateTime
-  verified   Boolean  @default(false)
-
-  createdAt  DateTime @default(now())
+  CUSTOMER
 }
 
 model RefreshToken {
-  token_id   String   @id @default(uuid())
-  token      String   @unique
-  user_id    String
-  role       String
+  token_id String @id @default(uuid())
+  token String @unique
+  customer_id String?
+  employee_id String?
 
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
+  customer Customer? @relation(fields:[customer_id], references:[customer_id])
+  employee Employee? @relation(fields:[employee_id], references:[employee_id])
+
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
+
+
+
+model OTP {
+  otp_id String @id @default(uuid())
+
+  email String
+  otp_code String
+  type OTPType
+
+  expiresAt DateTime
+  verified Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
+enum OTPType {
+  RESET_PASSWORD
+  VERIFY_EMAIL
+}
+
+
 
 model Category {
   category_id   String      @id @default(uuid())
@@ -69,6 +93,8 @@ model Category {
 
   products      Product[]
 }
+
+
 
 model Product {
   product_id    String      @id @default(uuid())
@@ -92,6 +118,9 @@ model Product {
   @@index([category_id])
 }
 
+
+
+
 model ProductImage {
   image_id   String   @id @default(uuid())
   image_url  String
@@ -104,23 +133,39 @@ model ProductImage {
 
 }
 
+
+
+
 model Customer {
-  customer_id   String      @id @default(uuid())
+  customer_id   String   @id @default(uuid())
   customer_name String
   password      String
-  phone         String  @unique
-  email         String  @unique
+  phone         String   @unique
+  email         String   @unique
   gender        String?
   address       String?
+  role          Role @default(CUSTOMER)
+  isActive      Boolean       @default(true)
   point         Int      @default(0)
   lastLogin     DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+
+  failedLoginAttempts Int @default(0)
+  lockUntil DateTime?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   orders        Order[]
   sales         Sale[]
   points        Point[]
+  RefreshTokens RefreshToken[]
+  
+  @@index([email])
+  @@index([phone])
 }
+
+
+
 
 model Supplier {
   supplier_id   String      @id @default(uuid())
@@ -132,6 +177,9 @@ model Supplier {
 
   purchase_orders PurchaseOrder[]
 }
+
+
+
 
 model PurchaseOrder {
   purchase_id   String      @id @default(uuid())
@@ -152,6 +200,9 @@ model PurchaseOrder {
   @@index([supplier_id])
   @@index([employee_id])
 }
+
+
+
 
 model PurchaseDetail {
   purchase_detail_id String @id @default(uuid())

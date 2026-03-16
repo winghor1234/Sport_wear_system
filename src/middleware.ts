@@ -1,80 +1,80 @@
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
+import { NextRequest, NextResponse } from "next/server";
+import { verify } from "jsonwebtoken";
+import { roleRoutes } from "./config/roleRoutes";
+import { JwtPayload } from "./types/jwt";
+import { apiLimiter } from "./utils/rateLimiter";
 
-import { verifyAccessToken, verifyRefreshToken, signAccessToken } from "@/utils/jwt"
 
-export async function middleware(request: NextRequest) {
+export async function middleware(req: NextRequest) {
+    const pathname = req.nextUrl.pathname;
 
-    const path = request.nextUrl.pathname
-
-    const accessToken = request.cookies.get("access_token")?.value
-    const refreshToken = request.cookies.get("refresh_token")?.value
-
-    // Public routes
-    const publicRoutes = [
-        "/api/auth/customer/login",
-        "/api/auth/customer/register",
-        "/api/auth/customer/forgot-password",
-        "/api/auth/customer/verify-otp",
-        "/api/auth/customer/reset-password",
-        "/api/auth/employee/login"
-    ]
-
-    if (publicRoutes.includes(path)) {
-        return NextResponse.next()
+    /* ✅ allow auth routes */
+    if (pathname.startsWith("/api/auth")) {
+        return NextResponse.next();
     }
 
-    // ถ้ามี access token
-    if (accessToken) {
-
-        try {
-
-            verifyAccessToken(accessToken)
-
-            return NextResponse.next()
-
-        } catch { }
-
+    try {
+        const ip = req.headers.get("x-forwarded-for") || "unknown"
+        await apiLimiter.consume(ip)
+    } catch {
+        return NextResponse.json(
+            { message: "Too many requests" },
+            { status: 429 }
+        )
     }
 
-    // ถ้า access token หมดอายุ → ใช้ refresh token
-    if (refreshToken) {
 
-        try {
+    const token = req.cookies.get("access_token")?.value;
+    if (!token) {
+        return NextResponse.json(
+            { message: "Unauthorized" },
+            { status: 401 }
+        );
+    }
 
-            const payload = verifyRefreshToken(refreshToken)
+    try {
 
-            const newAccessToken = signAccessToken({
-                user_id: payload.user_id,
-                role: payload.role
-            })
+        const payload = verify(token, process.env.JWT_ACCESS_SECRET!) as JwtPayload;
 
-            const response = NextResponse.next()
+        const role = payload.role;
 
-            response.cookies.set("access_token", newAccessToken, {
-                httpOnly: true,
-                secure: true,
-                sameSite: "strict",
-                path: "/",
-                maxAge: 60 * 15
-            })
-
-            return response
-
-        } catch {
-
-            return NextResponse.json(
-                { message: "Unauthorized" },
-                { status: 401 }
-            )
-
+        if (role === "ADMIN") {
+            return NextResponse.next();
         }
 
+        const allowedRoutes = roleRoutes[role];
+
+        if (!allowedRoutes) {
+            return NextResponse.json(
+                { message: "Forbidden" },
+                { status: 403 }
+            );
+        }
+
+        const isAllowed = allowedRoutes.some((route: string) =>
+            pathname.startsWith(route)
+        );
+
+        if (!isAllowed) {
+            return NextResponse.json(
+                { message: "Forbidden" },
+                { status: 403 }
+            );
+        }
+
+        return NextResponse.next();
+
+    } catch {
+
+        return NextResponse.json(
+            { message: "Invalid token" },
+            { status: 401 }
+        );
+
     }
 
-    return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-    )
-
 }
+
+export const config = {
+    matcher: ["/api/:path*"]
+};

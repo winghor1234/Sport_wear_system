@@ -1,3 +1,6 @@
+import { Prisma } from "@prisma/client"
+
+
 export interface CustomerLoginInput {
     email: string
     password: string
@@ -21,11 +24,16 @@ export interface LoginInput {
 }
 
 export interface AuthUser {
-  user_id: string
-  role: "ADMIN" | "STAFF" | "CUSTOMER"
+    user_id: string
+    role: "ADMIN" | "STAFF" | "CUSTOMER"
 }
 
 export interface JwtPayload {
-  user_id: string
-  role: string
+    user_id: string
+    role: string
 }
+
+
+
+
+
