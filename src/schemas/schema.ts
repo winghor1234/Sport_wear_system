@@ -115,3 +115,32 @@ export const saleSchema = z.object({
   items: z.array(saleItemSchema)
 })
 export type SaleInput = z.infer<typeof saleSchema>
+
+
+// auth customer login schema
+export const customerLoginAuthSchema = z.object({
+  email: z.string().email().optional(),
+  phone: z.string(),
+  password: z.string(),
+  point: z.number().optional()
+
+})
+export type CustomerLoginInput = z.infer<typeof customerLoginAuthSchema>
+
+// auth customer register schema
+export const customerRegisterSchema = z.object({
+  customer_name: z.string(),
+  phone: z.string(),
+  password: z.string(),
+  email: z.string().email(),
+  gender: z.string().optional(),
+  address: z.string().optional()
+})
+export type CustomerRegisterInput = z.infer<typeof customerRegisterSchema>
+
+
+// auth admin login schema
+export const adminAuthSchema = z.object({ 
+  username: z.string(),password: z.string()
+})
+export type AdminAuthInput = z.infer<typeof adminAuthSchema>

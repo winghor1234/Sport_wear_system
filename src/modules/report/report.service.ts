@@ -1,44 +1,245 @@
+// import { prisma } from "@/lib/prisma"
+// import { Prisma } from "@prisma/client"
+
+// export const reportService = {
+
+//     async getProductReport() {
+
+//         return prisma.product.findMany({
+//             select: {
+//                 product_id: true,
+//                 product_name: true,
+//                 stock_qty: true,
+//                 price: true,
+//                 category: {
+//                     select: {
+//                         category_name: true
+//                     }
+//                 }
+//             }
+//         })
+
+//     },
+
+//     async getSalesReport(where?: Prisma.SaleWhereInput) {
+
+//         return prisma.sale.findMany({
+//             include: {
+//                 employee: true,
+//                 customer: true,
+//                 sale_details: {
+//                     include: {
+//                         product: true
+//                     }
+//                 }
+//             },
+//             orderBy: {
+//                 sale_date: "desc"
+//             }
+//         })
+
+//     },
+
+//     async getPurchaseReport() {
+
+//         return prisma.purchaseOrder.findMany({
+//             include: {
+//                 supplier: true,
+//                 employee: true,
+//                 purchase_details: {
+//                     include: {
+//                         product: true
+//                     }
+//                 }
+//             }
+//         })
+
+//     },
+
+//     async getRevenueReport() {
+
+//         const sales = await prisma.sale.aggregate({
+//             _sum: {
+//                 total_amount: true
+//             }
+//         })
+
+//         const purchases = await prisma.purchaseOrder.aggregate({
+//             _sum: {
+//                 total_amount: true
+//             }
+//         })
+
+//         const revenue = sales._sum.total_amount || 0
+//         const cost = purchases._sum.total_amount || 0
+
+//         return {
+//             revenue,
+//             cost,
+//             profit: revenue - cost
+//         }
+
+//     },
+
+
+//     async getImportReport() {
+
+//         return prisma.import.findMany({
+//             include: {
+//                 employee: true,
+//                 purchase: true,
+//                 import_details: {
+//                     include: {
+//                         product: true
+//                     }
+//                 }
+//             }
+//         })
+
+//     },
+
+
+//     async getCustomerReport() {
+
+//         return prisma.customer.findMany({
+//             include: {
+//                 orders: true,
+//                 sales: true
+//             }
+//         })
+
+//     },
+
+//     async getSalesQuantityReport() {
+
+//         return prisma.saleDetail.groupBy({
+//             by: ["product_id"],
+//             _sum: {
+//                 quantity: true
+//             },
+//             orderBy: {
+//                 _sum: {
+//                     quantity: "desc"
+//                 }
+//             }
+//         })
+
+//     },
+
+
+//     // -------------------------------------------------------------------------------------------------
+
+//     async getDashboardSummary() {
+
+//         const totalProducts = await prisma.product.count()
+//         const totalCustomers = await prisma.customer.count()
+//         const totalOrders = await prisma.order.count()
+//         const totalSales = await prisma.sale.count()
+
+//         const revenue = await prisma.sale.aggregate({
+//             _sum: {
+//                 total_amount: true
+//             }
+//         })
+
+//         return {
+//             totalProducts,
+//             totalCustomers,
+//             totalOrders,
+//             totalSales,
+//             revenue: revenue._sum.total_amount || 0
+//         }
+
+//     },
+
+//     async getTopSellingProducts() {
+
+//         return prisma.saleDetail.groupBy({
+//             by: ["product_id"],
+//             _sum: {
+//                 quantity: true
+//             },
+//             orderBy: {
+//                 _sum: {
+//                     quantity: "desc"
+//                 }
+//             },
+//             take: 10
+//         })
+
+//         // this is show detail of top selling products
+
+//         // const products = await prisma.product.findMany({
+//         //     where: {
+//         //         product_id: {
+//         //             in: result.map(r => r.product_id)
+//         //         }
+//         //     }
+//         // })
+
+//         // return result.map(r => ({
+//         //     ...r,
+//         //     product: products.find(p => p.product_id === r.product_id)
+//         // }))
+
+//     },
+
+
+//     async getLowStockProducts(threshold = 10) {
+
+//         return prisma.product.findMany({
+
+//             where: {
+//                 stock_qty: {
+//                     lte: threshold
+//                 }
+//             },
+
+//             include: {
+//                 category: true
+//             },
+
+//             orderBy: {
+//                 stock_qty: "asc"
+//             }
+
+//         })
+
+//     },
+
+
+//     async getMonthlyRevenue() {
+
+//         return prisma.$queryRaw`
+//     SELECT 
+//       DATE_TRUNC('month', sale_date) AS month,
+//       SUM(total_amount) AS revenue
+//     FROM "Sale"
+//     GROUP BY month
+//     ORDER BY month ASC
+//   `
+
+//     }
+
+// }
+
+
 import { prisma } from "@/lib/prisma"
 
 export const reportService = {
 
+    // Product Report
     async getProductReport() {
 
         return prisma.product.findMany({
-            select: {
-                product_id: true,
-                product_name: true,
-                stock_qty: true,
-                price: true,
-                category: {
-                    select: {
-                        category_name: true
-                    }
-                }
-            }
-        })
-
-    },
-
-    async getSalesReport() {
-
-        return prisma.sale.findMany({
             include: {
-                employee: true,
-                customer: true,
-                sale_details: {
-                    include: {
-                        product: true
-                    }
-                }
-            },
-            orderBy: {
-                sale_date: "desc"
+                category: true
             }
         })
 
     },
 
+    // Purchase Report
     async getPurchaseReport() {
 
         return prisma.purchaseOrder.findMany({
@@ -55,32 +256,7 @@ export const reportService = {
 
     },
 
-    async getRevenueReport() {
-
-        const sales = await prisma.sale.aggregate({
-            _sum: {
-                total_amount: true
-            }
-        })
-
-        const purchases = await prisma.purchaseOrder.aggregate({
-            _sum: {
-                total_amount: true
-            }
-        })
-
-        const revenue = sales._sum.total_amount || 0
-        const cost = purchases._sum.total_amount || 0
-
-        return {
-            revenue,
-            cost,
-            profit: revenue - cost
-        }
-
-    },
-
-
+    // Import Report
     async getImportReport() {
 
         return prisma.import.findMany({
@@ -97,18 +273,14 @@ export const reportService = {
 
     },
 
-
+    // Customer Report
     async getCustomerReport() {
 
-        return prisma.customer.findMany({
-            include: {
-                orders: true,
-                sales: true
-            }
-        })
+        return prisma.customer.findMany()
 
     },
 
+    // Sales Quantity Report
     async getSalesQuantityReport() {
 
         return prisma.saleDetail.groupBy({
@@ -125,32 +297,7 @@ export const reportService = {
 
     },
 
-
-    // -------------------------------------------------------------------------------------------------
-
-    async getDashboardSummary() {
-
-        const totalProducts = await prisma.product.count()
-        const totalCustomers = await prisma.customer.count()
-        const totalOrders = await prisma.order.count()
-        const totalSales = await prisma.sale.count()
-
-        const revenue = await prisma.sale.aggregate({
-            _sum: {
-                total_amount: true
-            }
-        })
-
-        return {
-            totalProducts,
-            totalCustomers,
-            totalOrders,
-            totalSales,
-            revenue: revenue._sum.total_amount || 0
-        }
-
-    },
-
+    // Top Selling Products
     async getTopSellingProducts() {
 
         return prisma.saleDetail.groupBy({
@@ -168,7 +315,45 @@ export const reportService = {
 
     },
 
+    // Low Stock Alert
+    async getLowStockProducts() {
 
+        return prisma.product.findMany({
+            where: {
+                stock_qty: {
+                    lt: 10
+                }
+            }
+        })
+
+    },
+
+    // Revenue Report
+    async getRevenueReport() {
+
+        const revenue = await prisma.sale.aggregate({
+            _sum: {
+                total_amount: true
+            }
+        })
+
+        const cost = await prisma.importDetail.aggregate({
+            _sum: {
+                cost_price: true
+            }
+        })
+
+        const profit =
+            (revenue._sum.total_amount || 0) -
+            (cost._sum.cost_price || 0)
+
+        return {
+            revenue: revenue._sum.total_amount || 0,
+            cost: cost._sum.cost_price || 0,
+            profit
+        }
+
+    },
     async getMonthlyRevenue() {
 
         return prisma.$queryRaw`
@@ -180,6 +365,33 @@ export const reportService = {
     ORDER BY month ASC
   `
 
+    },
+    async getDashboardSummary() {
+
+        const revenue = await prisma.sale.aggregate({
+            _sum: {
+                total_amount: true
+            }
+        })
+
+        const cost = await prisma.importDetail.aggregate({
+            _sum: {
+                cost_price: true
+            }
+        })
+
+        const profit =
+            (revenue._sum.total_amount || 0) -
+            (cost._sum.cost_price || 0)
+
+        return {
+            revenue: revenue._sum.total_amount || 0,
+            cost: cost._sum.cost_price || 0,
+            profit
+        }
+
     }
+
+
 
 }

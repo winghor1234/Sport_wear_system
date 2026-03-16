@@ -17,17 +17,47 @@ model Employee {
   employee_id   String      @id @default(uuid())
   employee_name String
   gender        String?
+  email         String  @unique
   phone         String
   address       String?
   position      String?
-  username      String   @unique
   password      String
+  role          EmployeeRole @default(STAFF)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  isActive      Boolean  @default(true)
+  lastLogin     DateTime?
 
   purchases     PurchaseOrder[]
   imports       Import[]
   sales         Sale[]
+}
+
+enum EmployeeRole {
+  ADMIN
+  STAFF
+}
+
+model PasswordOTP {
+  otp_id     String   @id @default(uuid())
+  email      String
+  otp_code   String
+  expiresAt  DateTime
+  verified   Boolean  @default(false)
+
+  createdAt  DateTime @default(now())
+}
+
+model RefreshToken {
+  token_id   String   @id @default(uuid())
+  token      String   @unique
+  user_id    String
+  role       String
+
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
 }
 
 model Category {
@@ -52,6 +82,8 @@ model Product {
   category_id   String
   category      Category @relation(fields: [category_id], references: [category_id])
 
+  images       ProductImage[]
+
   purchase_details PurchaseDetail[]
   import_details   ImportDetail[]
   order_details    OrderDetail[]
@@ -60,13 +92,28 @@ model Product {
   @@index([category_id])
 }
 
+model ProductImage {
+  image_id   String   @id @default(uuid())
+  image_url  String
+
+  product_id String
+  product    Product @relation(fields: [product_id], references: [product_id])
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+}
+
 model Customer {
   customer_id   String      @id @default(uuid())
   customer_name String
-  phone         String
+  password      String
+  phone         String  @unique
+  email         String  @unique
+  gender        String?
   address       String?
-  email         String?
   point         Int      @default(0)
+  lastLogin     DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
