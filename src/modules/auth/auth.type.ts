@@ -1,26 +1,21 @@
-import { Prisma } from "@prisma/client"
-
-
-export interface CustomerLoginInput {
+export interface LoginInput {
     email: string
     password: string
 }
 
-export interface EmployeeLoginInput {
-    email: string
-    password: string
-}
-
-export interface RegisterInput {
+export interface CustomerRegisterInput {
     customer_name: string
     email: string
     password: string
     phone: string
 }
 
-export interface LoginInput {
+
+export interface EmployeeRegisterInput {
+    employee_name: string
     email: string
     password: string
+    phone: string
 }
 
 export interface AuthUser {

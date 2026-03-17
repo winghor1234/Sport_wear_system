@@ -23,6 +23,8 @@ model Employee {
   position      String?
   password      String
   role          Role  @default(STAFF)
+  failedLoginAttempts Int @default(0)
+  lockUntil DateTime?
 
 
   isActive      Boolean       @default(true)
@@ -53,8 +55,8 @@ model RefreshToken {
   customer_id String?
   employee_id String?
 
-  customer Customer? @relation(fields:[customer_id], references:[customer_id])
-  employee Employee? @relation(fields:[employee_id], references:[employee_id])
+  customer Customer? @relation(fields:[customer_id], references:[customer_id], onDelete: Cascade)
+  employee Employee? @relation(fields:[employee_id], references:[employee_id], onDelete: Cascade)
 
   expiresAt DateTime
   createdAt DateTime @default(now())
@@ -124,9 +126,10 @@ model Product {
 model ProductImage {
   image_id   String   @id @default(uuid())
   image_url  String
+  public_id  String
 
   product_id String
-  product    Product @relation(fields: [product_id], references: [product_id])
+  product    Product @relation(fields: [product_id], references: [product_id], onDelete: Cascade)
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -214,8 +217,8 @@ model PurchaseDetail {
   purchase_id String
   product_id  String
 
-  purchase PurchaseOrder @relation(fields: [purchase_id], references: [purchase_id])
-  product  Product       @relation(fields: [product_id], references: [product_id])
+  purchase PurchaseOrder @relation(fields: [purchase_id], references: [purchase_id], onDelete: Cascade)
+  product  Product       @relation(fields: [product_id], references: [product_id], onDelete: Cascade)
 
   @@index([purchase_id])
   @@index([product_id])
@@ -245,8 +248,11 @@ model ImportDetail {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  import  Import  @relation(fields: [import_id], references: [import_id])
-  product Product @relation(fields: [product_id], references: [product_id])
+  import  Import  @relation(fields: [import_id], references: [import_id], onDelete: Cascade)
+  product Product @relation(fields: [product_id], references: [product_id], onDelete: Cascade)
+
+  @@index([import_id])
+  @@index([product_id])
 }
 
 model Order {
@@ -259,7 +265,7 @@ model Order {
 
   customer_id  String
 
-  customer Customer @relation(fields: [customer_id], references: [customer_id])
+  customer Customer @relation(fields: [customer_id], references: [customer_id], onDelete: Cascade)
 
   order_details OrderDetail[]
   payment       Payment?
@@ -278,7 +284,7 @@ model OrderDetail {
   order_id  String
   product_id String
 
-  order   Order   @relation(fields: [order_id], references: [order_id])
+  order   Order   @relation(fields: [order_id], references: [order_id], onDelete: Cascade)
   product Product @relation(fields: [product_id], references: [product_id])
 }
 
@@ -308,7 +314,7 @@ model SaleDetail {
   sale_id  String
   product_id String
 
-  sale    Sale    @relation(fields: [sale_id], references: [sale_id])
+  sale    Sale    @relation(fields: [sale_id], references: [sale_id], onDelete: Cascade)
   product Product @relation(fields: [product_id], references: [product_id])
 }
 
@@ -346,5 +352,5 @@ model Point {
 
   customer_id String
 
-  customer Customer @relation(fields: [customer_id], references: [customer_id])
+  customer Customer @relation(fields: [customer_id], references: [customer_id], onDelete: Cascade)
 }

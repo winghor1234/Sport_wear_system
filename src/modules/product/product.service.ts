@@ -1,60 +1,7 @@
-
-// import { prisma } from "@/lib/prisma"
-// import { ProductInput, productSchema, ProductUpdateInput } from "@/schemas/schema"
-// import { Prisma } from "@prisma/client"
-
-
-// export const productService = {
-
-//   async getProducts(options?: Prisma.ProductFindManyArgs) {
-//     return prisma.product.findMany(options)
-//   },
-
-//   async getProduct(id: string) {
-//     const product = await prisma.product.findUnique({
-//       where: { product_id: id }
-//     })
-//     if (!product) {
-//       throw new Error("Product not found!!")
-//     }
-//     return product
-//   },
-
-//   async createProduct(data: ProductInput) {
-//     const validated = productSchema.parse(data)
-//     const product = await prisma.product.create({ data: validated })
-//     if (!product) {
-//       throw new Error(" Invalid product created!!")
-//     }
-//     return product
-//   },
-
-//   async updateProduct(id: string, data: ProductUpdateInput) {
-//     const product = await prisma.product.update({
-//       where: { product_id: id },
-//       data
-//     })
-//     if (!product) {
-//       throw new Error("Invalid product updated!!")
-//     }
-//     return product
-//   },
-
-//   async deleteProduct(id: string) {
-//     const product = await prisma.product.delete({
-//       where: { product_id: id }
-//     })
-//     if (!product) {
-//       throw new Error("Invalid product deleted!!")
-//     }
-//     return product
-
-//   }
-// }
-
 import { prisma } from "@/lib/prisma"
-import { CreateProductInput, UpdateProductInput } from "./product.types"
 import { Prisma } from "@prisma/client"
+import { uploadMultipleImages, convertFileToBase64, deleteImages } from "@/utils/cloudinary";
+import { CreateProductInput, ProductImageInput, UpdateProductInput } from "./product.types";
 
 export const productService = {
 
@@ -88,29 +35,137 @@ export const productService = {
 
   },
 
+  /* 🔥 CREATE */
   async createProduct(data: CreateProductInput) {
+    let images: ProductImageInput[] = [];
+    if (data.files?.length) {
+      const base64Files = await Promise.all(
+        data.files.map(convertFileToBase64)
+      );
+      const uploaded = await uploadMultipleImages(base64Files, data.folder);
+      images = uploaded.map(img => ({
+        image_url: img.url,
+        public_id: img.publicId
+      }));
+    }
 
     return prisma.product.create({
-      data
-    })
-
+      data: {
+        product_name: data.product_name,
+        description: data.description,
+        price: data.price,
+        stock_qty: data.stock_qty,
+        category_id: data.category_id,
+        images: {
+          create: images
+        }
+      },
+      include: { images: true }
+    });
   },
 
-  async updateProduct(id: string, data: UpdateProductInput) {
+  /* 🔥 UPDATE (replace images) */
+  async updateProduct(productId: string, data: UpdateProductInput) {
 
+    const product = await prisma.product.findUnique({
+      where: { product_id: productId },
+      include: { images: true }
+    });
+
+    if (!product) {
+      throw new Error("Product not found");
+    }
+
+   let images: ProductImageInput[] = [];
+
+    /* 🔥 ถ้ามีรูปใหม่ */
+    if (data.files?.length) {
+
+      /* ✅ 1. upload ใหม่ก่อน (กัน data loss) */
+      const base64Files = await Promise.all(
+        data.files.map(convertFileToBase64)
+      );
+
+      const uploaded = await uploadMultipleImages(
+        base64Files,
+        data.folder ?? "products"
+      );
+
+      images = uploaded.map(img => ({
+        image_url: img.url,
+        public_id: img.publicId
+      }));
+
+      /* ✅ 2. ลบของเก่า */
+      if (product.images.length) {
+
+        await deleteImages(product.images.map(i => i.public_id));
+
+        await prisma.productImage.deleteMany({
+          where: { product_id: productId }
+        });
+      }
+    }
+
+    /* 🔥 update product */
     return prisma.product.update({
-      where: { product_id: id },
-      data
-    })
+      where: { product_id: productId },
+      data: {
+        product_name: data.product_name,
+        price: data.price,
+        stock_qty: data.stock_qty,
+        description: data.description,
+        category_id: data.category_id,
 
+        ...(images.length > 0 && {
+          images: {
+            create: images
+          }
+        })
+      },
+      include: { images: true }
+    });
   },
 
-  async deleteProduct(id: string) {
+  /* 🔥 DELETE IMAGE */
+  async deleteImage(imageId: string) {
 
-    return prisma.product.delete({
-      where: { product_id: id }
-    })
+    const image = await prisma.productImage.findUnique({
+      where: { image_id: imageId }
+    });
 
+    if (!image) throw new Error("Image not found");
+
+    await deleteImages([image.public_id]);
+
+    await prisma.productImage.delete({
+      where: { image_id: imageId }
+    });
+
+    return true;
+  },
+
+
+  async deleteProduct(productId: string) {
+
+    const product = await prisma.product.findUnique({
+      where: { product_id: productId },
+      include: { images: true }
+    });
+
+    if (!product) {
+      throw new Error("Product not found");
+    }
+
+    if (product.images.length) {
+      await deleteImages(product.images.map(i => i.public_id));
+    }
+
+    await prisma.product.delete({
+      where: { product_id: productId }
+    });
+
+    return true;
   }
 
 }

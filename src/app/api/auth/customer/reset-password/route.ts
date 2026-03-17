@@ -2,5 +2,5 @@ import { authController } from "@/modules/auth/auth.controller"
 import { NextRequest } from "next/server"
 
 export async function POST(req: NextRequest) {
-    return authController.resetPassword(req)
+    return authController.customerResetPassword(req)
 }

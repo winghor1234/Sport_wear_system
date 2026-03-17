@@ -78,7 +78,7 @@ export const orderController = {
 
     },
 
-    async createOrder(req: Request) {
+    async createOrder(req: NextRequest) {
 
         try {
 

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verify } from "jsonwebtoken";
 import { roleRoutes } from "./config/roleRoutes";
 import { JwtPayload } from "./types/jwt";
 import { apiLimiter } from "./utils/rateLimiter";
+import { jwtVerify } from "jose";
 
 
 export async function middleware(req: NextRequest) {
@@ -12,7 +12,6 @@ export async function middleware(req: NextRequest) {
     if (pathname.startsWith("/api/auth")) {
         return NextResponse.next();
     }
-
     try {
         const ip = req.headers.get("x-forwarded-for") || "unknown"
         await apiLimiter.consume(ip)
@@ -31,19 +30,14 @@ export async function middleware(req: NextRequest) {
             { status: 401 }
         );
     }
-
     try {
-
-        const payload = verify(token, process.env.JWT_ACCESS_SECRET!) as JwtPayload;
-
+        const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+        const { payload } = await jwtVerify<JwtPayload>(token, secret);
         const role = payload.role;
-
         if (role === "ADMIN") {
             return NextResponse.next();
         }
-
         const allowedRoutes = roleRoutes[role];
-
         if (!allowedRoutes) {
             return NextResponse.json(
                 { message: "Forbidden" },
@@ -64,8 +58,8 @@ export async function middleware(req: NextRequest) {
 
         return NextResponse.next();
 
-    } catch {
-
+    } catch (error) {
+        console.log("error : ", error)
         return NextResponse.json(
             { message: "Invalid token" },
             { status: 401 }
