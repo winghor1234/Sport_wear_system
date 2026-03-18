@@ -27,6 +27,7 @@ export const authController = {
             });
             return response;
         } catch (error) {
+            console.log(error)
             if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
                 return errorResponse(error.message, error.statusCode);
             }

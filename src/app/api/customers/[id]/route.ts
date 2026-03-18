@@ -1,29 +1,19 @@
 import { customerController } from "@/modules/customer/customer.controller"
 import { NextRequest } from "next/server"
 
-export async function GET(
-    req: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params
+    return customerController.getCustomer(id)
+}
 
-    return customerController.getCustomer(params.id)
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params
+    return customerController.updateCustomer(req, id)
 
 }
 
-export async function PUT(
-    req: NextRequest,
-    { params }: { params: { id: string } }
-) {
-
-    return customerController.updateCustomer(req, params.id)
-
-}
-
-export async function DELETE(
-    req: NextRequest,
-    { params }: { params: { id: string } }
-) {
-
-    return customerController.deleteCustomer(params.id)
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params
+    return customerController.deleteCustomer(id)
 
 }

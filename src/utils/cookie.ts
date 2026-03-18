@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
+import { jwtVerify } from "jose";
 
 const ACCESS_TOKEN_SECRET = process.env.JWT_SECRET;
 const REFRESH_TOKEN_SECRET = process.env.JWT_SECRET_REFRESH;
@@ -17,7 +18,7 @@ export function setAuthCookies({ response, accessToken, refreshToken }: AuthCook
         secure: isProd,
         sameSite: "strict",
         path: "/",
-        maxAge: 60 * 15 // 15 minutes
+        maxAge: 60 * 60 * 24 * 1 // 1 days
     });
 
     response.cookies.set("refresh_token", refreshToken, {
@@ -31,12 +32,28 @@ export function setAuthCookies({ response, accessToken, refreshToken }: AuthCook
 }
 
 export function getAuthCookies(request: NextRequest) {
-    const accessToken = request.cookies.get("accessToken")?.value || null;
-    const refreshToken = request.cookies.get("refreshToken")?.value || null;
+    const accessToken = request.cookies.get("access_token")?.value || null;
+    const refreshToken = request.cookies.get("refresh_token")?.value || null;
 
     return { accessToken, refreshToken };
 }
 
+export async function getUserFromToken(req: NextRequest) {
+    const token = req.cookies.get("access_token")?.value
+    if (!token) {
+        throw new Error("Unauthorized")
+    }
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET)
+    try {
+        const { payload } = await jwtVerify(token, secret)
+        console.log("payload : ",payload)
+        return payload
+
+    } catch (error) {
+        console.log(error)
+        return null
+    }
+}
 
 export function clearAuthCookies(response: NextResponse) {
     response.cookies.set("access_token", "", {
@@ -67,7 +84,7 @@ export function generateAccessToken(userId: string, role: string): string {
             },
             ACCESS_TOKEN_SECRET,
             {
-                expiresIn: "15m",
+                expiresIn: "1d",// ✅ อายุยาว 1 วัน
                 algorithm: 'HS256'
             }
         );

@@ -188,6 +188,7 @@ model PurchaseOrder {
   purchase_id   String      @id @default(uuid())
   purchase_date DateTime @default(now())
   total_amount  Float?
+  status        String   @default("pending")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -211,6 +212,7 @@ model PurchaseDetail {
   purchase_detail_id String @id @default(uuid())
   quantity           Int
   price              Float
+  received_qty       Int    @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

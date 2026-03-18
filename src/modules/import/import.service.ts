@@ -93,7 +93,6 @@ export const importService = {
     },
 
     async getImport(id: string) {
-
         const record = await prisma.import.findUnique({
             where: { import_id: id },
             include: {
@@ -106,17 +105,13 @@ export const importService = {
                 }
             }
         })
-
         if (!record) {
             throw new Error("Import not found")
         }
-
         return record
-
     },
 
     async createImport(data: Prisma.ImportCreateInput) {
-
         const result = await prisma.import.create({
             data,
             include: {
@@ -137,9 +132,7 @@ export const importService = {
             })
 
         }
-
         return result
-
     },
 
     async deleteImport(id: string) {
@@ -147,7 +140,6 @@ export const importService = {
         return prisma.import.delete({
             where: { import_id: id }
         })
-
     }
 
 }

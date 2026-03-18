@@ -1,79 +1,9 @@
-// import { prisma } from "@/lib/prisma"
-// import { Prisma } from "@prisma/client"
 
-// export const orderService = {
-
-//     async getOrders(options?: Prisma.OrderFindManyArgs) {
-//         return prisma.order.findMany(options)
-//     },
-
-//     async getOrder(id: string) {
-
-//         const order = await prisma.order.findUnique({
-//             where: { order_id: id },
-//             include: {
-//                 customer: true,
-//                 order_details: {
-//                     include: {
-//                         product: true
-//                     }
-//                 },
-//                 payment: true,
-//                 delivery: true
-//             }
-//         })
-
-//         if (!order) {
-//             throw new Error("Order not found")
-//         }
-
-//         return order
-//     },
-
-//     async createOrder(data: Prisma.OrderCreateInput) {
-
-//         const result = await prisma.$transaction(async (tx) => {
-
-//             const order = await tx.order.create({
-//                 data,
-//                 include: {
-//                     order_details: true
-//                 }
-//             })
-
-//             for (const detail of order.order_details) {
-
-//                 await tx.product.update({
-//                     where: { product_id: detail.product_id },
-//                     data: {
-//                         stock_qty: {
-//                             decrement: detail.quantity
-//                         }
-//                     }
-//                 })
-
-//             }
-
-//             return order
-//         })
-
-//         return result
-//     },
-
-//     async deleteOrder(id: string) {
-
-//         const order = await prisma.order.delete({
-//             where: { order_id: id }
-//         })
-
-//         return order
-//     }
-
-// }
 
 
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
+import { CreateOrderInput } from "./order.types"
 
 export const orderService = {
 
@@ -119,30 +49,43 @@ export const orderService = {
 
     },
 
-    async createOrder(data: Prisma.OrderCreateInput) {
-
-        const order = await prisma.order.create({
-            data,
-            include: {
-                order_details: true
-            }
-        })
-
-        // ลด stock
-        for (const item of order.order_details) {
-
-            await prisma.product.update({
-                where: { product_id: item.product_id },
-                data: {
-                    stock_qty: {
-                        decrement: item.quantity
-                    }
+    async createOrder(data: CreateOrderInput) {
+        await prisma.$transaction(async (tx) => {
+            // ✅ check stock ก่อน
+            for (const item of data.order_details) {
+                const product = await tx.product.findUnique({
+                    where: { product_id: item.product_id }
+                })
+                if (!product || product.stock_qty < item.quantity) {
+                    throw new Error("Insufficient stock")
                 }
+            }
+            // ✅ create order + details
+            const order = await tx.order.create({
+                data: {
+                    customer_id: data.customer_id,
+                    total_amount: data.total_amount,
+                    order_details: {
+                        create: data.order_details
+                    }
+                },
+                include: { order_details: true }
             })
 
-        }
+            // ✅ update stock
+            for (const item of data.order_details) {
+                await tx.product.update({
+                    where: { product_id: item.product_id },
+                    data: {
+                        stock_qty: {
+                            decrement: item.quantity
+                        }
+                    }
+                })
+            }
 
-        return order
+            return order
+        })
 
     },
 

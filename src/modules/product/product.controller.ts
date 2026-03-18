@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { productService } from "./product.service"
-import { sendSuccess, sendError } from "@/utils/response"
+import { sendSuccess, sendError, sendCreated } from "@/utils/response"
 import { getPaginationMeta, getPaginationParams } from "@/utils/pagination"
 import { getSearchParam } from "@/utils/search"
 import { getSortingParams } from "@/utils/sorting"
@@ -68,7 +68,7 @@ export const productController = {
                 folder: "products",
                 files: formData.getAll("images") as File[]
             });
-            return sendSuccess(product);
+            return sendCreated(product);
         } catch (error) {
             return sendError("Create product failed", 500, error);
         }

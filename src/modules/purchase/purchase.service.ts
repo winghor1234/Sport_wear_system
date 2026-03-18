@@ -65,6 +65,7 @@
 
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
+import { CreatePurchaseInput, UpdatePurchaseInput } from "./purchase.type"
 
 export const purchaseService = {
 
@@ -108,24 +109,72 @@ export const purchaseService = {
 
     },
 
-    async createPurchase(data: Prisma.PurchaseOrderCreateInput) {
-
-        return prisma.purchaseOrder.create({
-            data,
-            include: {
-                purchase_details: true
-            }
+    async createPurchase(data: CreatePurchaseInput, userId: string) {
+        return prisma.$transaction(async (tx) => {
+            return tx.purchaseOrder.create({
+                data: {
+                    supplier_id: data.supplier_id,
+                    employee_id: userId, // ✅ จาก token
+                    total_amount: data.total_amount,
+                    status: "pending",
+                    purchase_details: {
+                        create: data.purchase_details
+                    }
+                },
+                include: { purchase_details: true }
+            })
         })
-
     },
 
-    async updatePurchase(id: string, data: Prisma.PurchaseOrderUpdateInput) {
+    async updatePurchase(id: string, data: UpdatePurchaseInput, userId: string) {
+        return prisma.$transaction(async (tx) => {
 
-        return prisma.purchaseOrder.update({
-            where: { purchase_id: id },
-            data
+            // 🔍 1. check purchase exists
+            const existing = await tx.purchaseOrder.findUnique({
+                where: { purchase_id: id },
+                include: {
+                    imports: true,
+                    purchase_details: true
+                }
+            })
+
+            if (!existing) {
+                throw new Error("Purchase not found")
+            }
+
+            // ❌ 2. ห้าม update ถ้ามี import แล้ว
+            if (existing.imports.length > 0) {
+                throw new Error("Cannot update purchase after import")
+            }
+
+            // ❌ 3. optional: check status
+            if (existing.status !== "pending") {
+                throw new Error("Only pending purchase can be updated")
+            }
+
+            // 🧨 4. ลบ detail เก่า
+            await tx.purchaseDetail.deleteMany({
+                where: { purchase_id: id }
+            })
+
+            // 🔁 5. update + recreate details
+            const updated = await tx.purchaseOrder.update({
+                where: { purchase_id: id },
+                data: {
+                    supplier_id: data.supplier_id,
+                    employee_id: userId, // ✅ from token (override)
+                    total_amount: data.total_amount,
+                    purchase_details: {
+                        create: data.purchase_details
+                    }
+                },
+                include: {
+                    purchase_details: true
+                }
+            })
+
+            return updated
         })
-
     },
 
     async deletePurchase(id: string) {

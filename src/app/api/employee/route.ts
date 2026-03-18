@@ -1,15 +1,13 @@
 import { authController } from "@/modules/auth/auth.controller"
-import { customerController } from "@/modules/customer/customer.controller"
+import { employeeController } from "@/modules/employee/employee.controller"
 import { NextRequest } from "next/server"
 
 export async function GET(req: NextRequest) {
-
-    return customerController.getCustomers(req)
+    return employeeController.getEmployees(req)
 
 }
 
 export async function POST(req: NextRequest) {
-
-    return authController.customerRegister(req)
+    return authController.adminRegister(req)
 
 }

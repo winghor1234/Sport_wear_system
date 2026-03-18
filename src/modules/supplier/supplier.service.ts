@@ -56,39 +56,32 @@
 
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
+import { CreateSupplierInput, UpdateSupplierInput } from "./supplier.type"
 
 export const supplierService = {
 
     async getSuppliers(options?: Prisma.SupplierFindManyArgs) {
-
         return prisma.supplier.findMany(options)
-
     },
 
     async getSupplier(id: string) {
-
         const supplier = await prisma.supplier.findUnique({
             where: { supplier_id: id }
         })
-
         if (!supplier) {
             throw new Error("Supplier not found")
         }
-
         return supplier
-
     },
 
-    async createSupplier(data: Prisma.SupplierCreateInput) {
-
+    async createSupplier(data: CreateSupplierInput) {
         return prisma.supplier.create({
             data
         })
 
     },
 
-    async updateSupplier(id: string, data: Prisma.SupplierUpdateInput) {
-
+    async updateSupplier(id: string, data: UpdateSupplierInput) {
         return prisma.supplier.update({
             where: { supplier_id: id },
             data
