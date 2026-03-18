@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { jwtVerify } from "jose";
+import { JwtPayload } from "@/types/jwt";
 
 const ACCESS_TOKEN_SECRET = process.env.JWT_SECRET;
 const REFRESH_TOKEN_SECRET = process.env.JWT_SECRET_REFRESH;
@@ -43,15 +44,18 @@ export async function getUserFromToken(req: NextRequest) {
     if (!token) {
         throw new Error("Unauthorized")
     }
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET)
     try {
-        const { payload } = await jwtVerify(token, secret)
-        console.log("payload : ",payload)
-        return payload
+        const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+        const { payload } = await jwtVerify<JwtPayload>(token, secret);
+        // console.log("payload : ", payload)
+        return {
+            id: payload.userId as string,
+            role: payload.role as string
+        }
 
     } catch (error) {
         console.log(error)
-        return null
+         throw new Error("Invalid token")
     }
 }
 

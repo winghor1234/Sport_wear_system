@@ -61,10 +61,9 @@ export const purchaseController = {
 
     async createPurchase(req: NextRequest) {
         const body: CreatePurchaseInput = await req.json()
-        const payload = getUserFromToken(req) // ✅
-        console.log("id from cookie : ", payload.userId)
-
-        const purchase = await purchaseService.createPurchase(body, user.id)
+        const payload = getUserFromToken(req)
+        const userId = (await payload).id
+        const purchase = await purchaseService.createPurchase(body, userId)
         return sendSuccess(purchase)
     },
 
@@ -72,7 +71,6 @@ export const purchaseController = {
         try {
             const body: UpdatePurchaseInput = await req.json()
             const user = await getUserFromToken(req)
-            console.log("id from cookie : ", user)
             const purchase = await purchaseService.updatePurchase(id, body, user.id)
             return sendSuccess(purchase)
         } catch (error) {

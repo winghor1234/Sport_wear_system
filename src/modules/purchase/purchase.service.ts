@@ -162,7 +162,7 @@ export const purchaseService = {
                 where: { purchase_id: id },
                 data: {
                     supplier_id: data.supplier_id,
-                    employee_id: userId, // ✅ from token (override)
+                    employee_id: userId, 
                     total_amount: data.total_amount,
                     purchase_details: {
                         create: data.purchase_details
