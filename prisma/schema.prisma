@@ -304,6 +304,7 @@ model Sale {
   customer Customer? @relation(fields: [customer_id], references: [customer_id])
 
   sale_details SaleDetail[]
+  refund       Refund[]
 }
 
 model SaleDetail {
@@ -318,6 +319,27 @@ model SaleDetail {
 
   sale    Sale    @relation(fields: [sale_id], references: [sale_id], onDelete: Cascade)
   product Product @relation(fields: [product_id], references: [product_id])
+}
+
+
+model Refund {
+  refund_id    String   @id @default(uuid())
+  sale_id      String
+  total_amount Float
+  createdAt    DateTime @default(now())
+
+  sale         Sale     @relation(fields: [sale_id], references: [sale_id])
+  refund_details RefundDetail[]
+}
+
+model RefundDetail {
+  refund_detail_id String @id @default(uuid())
+  product_id       String
+  quantity         Int
+  price            Float
+
+  refund_id String
+  refund    Refund @relation(fields: [refund_id], references: [refund_id], onDelete: Cascade)
 }
 
 model Payment {

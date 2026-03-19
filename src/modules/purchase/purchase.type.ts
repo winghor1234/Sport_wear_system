@@ -1,6 +1,5 @@
 export type CreatePurchaseInput = {
   supplier_id: string
-  total_amount: number
   purchase_details: CreatePurchaseItemInput[]
 }
 export type CreatePurchaseItemInput = {

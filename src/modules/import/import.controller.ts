@@ -7,6 +7,8 @@ import { sendError, sendSuccess } from "@/utils/response"
 import { handleError } from "@/utils/errorHandler"
 import { Prisma } from "@prisma/client"
 import { NextRequest } from "next/server"
+import { CreateImportInput } from "./import.type"
+import { getUserFromToken } from "@/utils/cookie"
 export const importController = {
 
     async getImports(req: NextRequest) {
@@ -57,8 +59,10 @@ export const importController = {
 
     async createImport(req: NextRequest) {
         try {
-            const body = await req.json()
-            const record = await importService.createImport(body)
+            const body: CreateImportInput = await req.json()
+            const payload = getUserFromToken(req)
+            const userId = (await payload).id
+            const record = await importService.createImport(body, userId)
             return sendSuccess(record)
         } catch (error) {
             return sendError("Create import failed", 500, error)

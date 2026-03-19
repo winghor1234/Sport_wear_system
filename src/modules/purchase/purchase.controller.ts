@@ -70,8 +70,7 @@ export const purchaseController = {
     async updatePurchase(req: NextRequest, id: string) {
         try {
             const body: UpdatePurchaseInput = await req.json()
-            const user = await getUserFromToken(req)
-            const purchase = await purchaseService.updatePurchase(id, body, user.id)
+            const purchase = await purchaseService.updatePurchase(id, body)
             return sendSuccess(purchase)
         } catch (error) {
             return sendError("Update purchase failed", 500, error)
