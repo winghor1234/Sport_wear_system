@@ -3,9 +3,9 @@ import { prisma } from "@/lib/prisma"
 import { getPaginationParams, getPaginationMeta } from "@/utils/pagination"
 import { getSearchParam } from "@/utils/search"
 import { getSortingParams } from "@/utils/sorting"
-import { sendCreated, sendError, sendSuccess } from "@/utils/response"
+import { BadRequestError, errorResponse, ForbiddenError, NotFoundError, successResponse, UnauthorizedError } from "@/utils/response"
 import { Prisma } from "@prisma/client"
-import { NextRequest} from "next/server"
+import { NextRequest } from "next/server"
 import { CreateOrderInput } from "./order.types"
 
 export const orderController = {
@@ -34,12 +34,12 @@ export const orderController = {
                 prisma.order.count({ where })
             ])
             const meta = getPaginationMeta(total, page, limit)
-            return sendSuccess({
-                data: orders,
-                meta
-            })
+            return successResponse({ data: orders, meta }, "Get orders successfully", 200)
         } catch (error) {
-            return sendError("Get orders failed", 500, error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
 
         }
 
@@ -48,34 +48,37 @@ export const orderController = {
     async getOrder(id: string) {
         try {
             const order = await orderService.getOrder(id)
-            return sendSuccess(order)
+            return successResponse(order, "Get order successfully", 200)
         } catch (error) {
-            return sendError("Get order failed", 500, error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
     },
 
     async createOrder(req: NextRequest) {
         try {
             const body: CreateOrderInput = await req.json()
-            if (!body) {
-                return sendError("Invalid data", 400)
-            }
             const order = await orderService.createOrder(body)
-            return sendCreated(order, "Order created successfully")
+            return successResponse(order, "Create order successfully", 201)
         } catch (error) {
             console.log(error)
-            return sendError("Create order failed", 500, error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
     },
 
     async deleteOrder(id: string) {
         try {
             await orderService.deleteOrder(id)
-            return sendSuccess({
-                message: "Order deleted"
-            })
+            return successResponse(null, "Delete order successfully", 200)
         } catch (error) {
-            return sendError("Delete order failed", 500, error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
     }
 }

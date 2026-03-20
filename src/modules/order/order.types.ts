@@ -6,6 +6,5 @@ export interface CreateOrderDetailInput {
 
 export interface CreateOrderInput {
   customer_id: string
-  total_amount: number
   order_details: CreateOrderDetailInput[]
 }

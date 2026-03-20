@@ -1,28 +1,18 @@
 import { categoryService } from "./category.service"
 import { prisma } from "@/lib/prisma"
-
 import { getPaginationParams, getPaginationMeta } from "@/utils/pagination"
+import { BadRequestError, errorResponse, ForbiddenError, NotFoundError, successResponse, UnauthorizedError } from "@/utils/response"
 import { getSearchParam } from "@/utils/search"
 import { getSortingParams } from "@/utils/sorting"
-
-import { sendSuccess } from "@/utils/response"
-import { handleError } from "@/utils/errorHandler"
-
 import { Prisma } from "@prisma/client"
 import { NextRequest } from "next/server"
-
 export const categoryController = {
 
     async getCategories(req: NextRequest) {
-
         try {
-
             const { page, limit, skip } = getPaginationParams(req)
-
             const search = getSearchParam(req)
-
             const orderBy = getSortingParams(req)
-
             const where: Prisma.CategoryWhereInput = search
                 ? {
                     category_name: {
@@ -40,91 +30,69 @@ export const categoryController = {
                     take: limit,
                     orderBy
                 }),
-
                 prisma.category.count({ where })
 
             ])
-
             const meta = getPaginationMeta(total, page, limit)
-
-            return sendSuccess({
-                data: categories,
-                meta
-            })
-
+            return successResponse({ data: categories, meta }, "Get categories successfully", 200)
         } catch (error) {
-
-            return handleError(error)
-
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
 
     },
 
     async getCategory(id: string) {
-
         try {
-
             const category = await categoryService.getCategory(id)
-
-            return sendSuccess(category)
-
+            return successResponse(category, "Get category successfully", 200)
         } catch (error) {
-
-            return handleError(error)
-
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
 
     },
 
     async createCategory(req: Request) {
-
         try {
-
             const body = await req.json()
-
             const category = await categoryService.createCategory(body)
-
-            return sendSuccess(category)
-
+            return successResponse(category, "Create category successfully", 201)
         } catch (error) {
-
-            return handleError(error)
-
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
 
     },
 
     async updateCategory(req: Request, id: string) {
-
         try {
-
             const body = await req.json()
-
             const category = await categoryService.updateCategory(id, body)
-
-            return sendSuccess(category)
-
+            return successResponse(category, "Update category successfully", 200)
         } catch (error) {
-
-            return handleError(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
 
         }
 
     },
 
     async deleteCategory(id: string) {
-
         try {
-
             await categoryService.deleteCategory(id)
-
-            return sendSuccess({
-                message: "Category deleted"
-            })
-
+            return successResponse(null, "Delete category successfully", 200)
         } catch (error) {
-
-            return handleError(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
 
         }
 

@@ -3,12 +3,11 @@ import { prisma } from "@/lib/prisma"
 import { getPaginationParams, getPaginationMeta } from "@/utils/pagination"
 import { getSearchParam } from "@/utils/search"
 import { getSortingParams } from "@/utils/sorting"
-import { sendSuccess } from "@/utils/response"
-import { handleError } from "@/utils/errorHandler"
 import { Prisma } from "@prisma/client"
 import { NextRequest } from "next/server"
 import { CreateSaleInput } from "./sale.type"
 import { getUserFromToken } from "@/utils/cookie"
+import { BadRequestError, errorResponse, ForbiddenError, NotFoundError, successResponse, UnauthorizedError } from "@/utils/response"
 export const saleController = {
 
     async getSales(req: NextRequest) {
@@ -36,12 +35,12 @@ export const saleController = {
                 prisma.sale.count({ where })
             ])
             const meta = getPaginationMeta(total, page, limit)
-            return sendSuccess({
-                data: sales,
-                meta
-            })
+            return successResponse({ data: sales, meta}, "Get sales successfully", 200)
         } catch (error) {
-            return handleError(error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
 
     },
@@ -49,9 +48,12 @@ export const saleController = {
     async getSale(id: string) {
         try {
             const sale = await saleService.getSale(id)
-            return sendSuccess(sale)
+            return successResponse(sale, "Get sale successfully", 200)
         } catch (error) {
-            return handleError(error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
 
     },
@@ -62,30 +64,13 @@ export const saleController = {
             const payload = getUserFromToken(req)
             const userId = (await payload).id
             const sale = await saleService.createSale(body, userId)
-            return sendSuccess(sale)
+            return successResponse(sale, "Create sale successfully", 201)
         } catch (error) {
-            return handleError(error)
-
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
-
     },
-
-    async deleteSale(id: string) {
-
-        try {
-
-            await saleService.deleteSale(id)
-
-            return sendSuccess({
-                message: "Sale deleted"
-            })
-
-        } catch (error) {
-
-            return handleError(error)
-
-        }
-
-    }
 
 }

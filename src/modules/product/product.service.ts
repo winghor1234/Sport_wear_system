@@ -2,23 +2,28 @@ import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { uploadMultipleImages, convertFileToBase64, deleteImages } from "@/utils/cloudinary";
 import { CreateProductInput, ProductImageInput, UpdateProductInput } from "./product.types";
+import { BadRequestError, NotFoundError } from "@/utils/response";
 
 export const productService = {
 
   async getProducts(options?: Prisma.ProductFindManyArgs) {
 
-    return prisma.product.findMany({
+    const products = await prisma.product.findMany({
       ...options,
       include: {
         category: true,
         images: true
       }
     })
+    if (!products) {
+      throw new NotFoundError("Products not found")
+    }
+    return products
+
 
   },
 
   async getProduct(id: string) {
-
     const product = await prisma.product.findUnique({
       where: { product_id: id },
       include: {
@@ -28,7 +33,7 @@ export const productService = {
     })
 
     if (!product) {
-      throw new Error("Product not found")
+      throw new NotFoundError("Product not found")
     }
 
     return product
@@ -49,7 +54,7 @@ export const productService = {
       }));
     }
 
-    return prisma.product.create({
+    const product = await prisma.product.create({
       data: {
         product_name: data.product_name,
         description: data.description,
@@ -62,6 +67,10 @@ export const productService = {
       },
       include: { images: true }
     });
+    if (!product) {
+      throw new BadRequestError("Product not created")
+    }
+    return product
   },
 
   /* 🔥 UPDATE (replace images) */
@@ -73,7 +82,7 @@ export const productService = {
     });
 
     if (!product) {
-      throw new Error("Product not found");
+      throw new NotFoundError("Product not found");
     }
 
    let images: ProductImageInput[] = [];
@@ -108,7 +117,7 @@ export const productService = {
     }
 
     /* 🔥 update product */
-    return prisma.product.update({
+    const updatedProduct = await prisma.product.update({
       where: { product_id: productId },
       data: {
         product_name: data.product_name,
@@ -125,6 +134,10 @@ export const productService = {
       },
       include: { images: true }
     });
+    if (!updatedProduct) {
+      throw new BadRequestError("Product not updated");
+    }
+    return updatedProduct;
   },
 
   /* 🔥 DELETE IMAGE */
@@ -133,11 +146,8 @@ export const productService = {
     const image = await prisma.productImage.findUnique({
       where: { image_id: imageId }
     });
-
-    if (!image) throw new Error("Image not found");
-
+    if (!image) throw new NotFoundError("Image not found");
     await deleteImages([image.public_id]);
-
     await prisma.productImage.delete({
       where: { image_id: imageId }
     });
@@ -154,7 +164,7 @@ export const productService = {
     });
 
     if (!product) {
-      throw new Error("Product not found");
+      throw new NotFoundError("Product not found");
     }
 
     if (product.images.length) {

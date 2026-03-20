@@ -1,19 +1,24 @@
 
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
-import { CreateCustomerInput, UpdateCustomerInput } from "./customer.type"
+import { UpdateCustomerInput } from "./customer.type"
+import { BadRequestError, NotFoundError } from "@/utils/response"
 
 export const customerService = {
 
     async getCustomers(options?: Prisma.CustomerFindManyArgs) {
-
-        return prisma.customer.findMany({
+        const customers = await prisma.customer.findMany({
             ...options,
             include: {
                 orders: true,
                 sales: true
             }
         })
+        if (!customers) {
+            throw new NotFoundError("Customers not found")
+        }
+        return customers
+
 
     },
 
@@ -29,31 +34,46 @@ export const customerService = {
         })
 
         if (!customer) {
-            throw new Error("Customer not found")
+            throw new NotFoundError("Customer not found")
         }
 
         return customer
 
     },
 
-    // async createCustomer(data: CreateCustomerInput) {
-    //     return prisma.customer.create({
-    //         data
-    //     })
-    // },
 
     async updateCustomer(id: string, data: UpdateCustomerInput) {
-        return prisma.customer.update({
+        const customer = await prisma.customer.update({
             where: { customer_id: id },
             data
         })
+        if (!customer) {
+            throw new BadRequestError("Failed to update customer")
+        }
+        return customer
     },
 
     async deleteCustomer(id: string) {
-        return prisma.customer.delete({
+        const customer = await prisma.customer.findUnique({
             where: { customer_id: id }
         })
 
+        if (!customer) {
+            throw new NotFoundError("Customer not found")
+        }
+
+        // ❌ ถ้าปิดไปแล้ว
+        if (!customer.isActive) {
+            throw new BadRequestError("Customer already inactive")
+        }
+
+        // ✅ soft delete
+        return prisma.customer.update({
+            where: { customer_id: id },
+            data: {
+                isActive: false
+            }
+        })
     }
 
 }

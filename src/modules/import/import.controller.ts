@@ -3,8 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { getPaginationParams, getPaginationMeta } from "@/utils/pagination"
 import { getSearchParam } from "@/utils/search"
 import { getSortingParams } from "@/utils/sorting"
-import { sendError, sendSuccess } from "@/utils/response"
-import { handleError } from "@/utils/errorHandler"
+import { BadRequestError, errorResponse, ForbiddenError, NotFoundError, successResponse, UnauthorizedError } from "@/utils/response"
 import { Prisma } from "@prisma/client"
 import { NextRequest } from "next/server"
 import { CreateImportInput } from "./import.type"
@@ -38,12 +37,12 @@ export const importController = {
                 prisma.import.count({ where })
             ])
             const meta = getPaginationMeta(total, page, limit)
-            return sendSuccess({
-                data: imports,
-                meta
-            })
+            return successResponse({ data: imports, meta }, "Get imports successfully", 200)
         } catch (error) {
-            return handleError(error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
 
     },
@@ -51,9 +50,12 @@ export const importController = {
     async getImport(id: string) {
         try {
             const record = await importService.getImport(id)
-            return sendSuccess(record)
+            return successResponse(record, "Get import successfully", 200)
         } catch (error) {
-            return sendError("Get import failed", 500, error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
     },
 
@@ -63,20 +65,24 @@ export const importController = {
             const payload = getUserFromToken(req)
             const userId = (await payload).id
             const record = await importService.createImport(body, userId)
-            return sendSuccess(record)
+            return successResponse(record, "Create import successfully", 201)
         } catch (error) {
-            return sendError("Create import failed", 500, error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
     },
 
     async deleteImport(id: string) {
         try {
             await importService.deleteImport(id)
-            return sendSuccess({
-                message: "Import deleted"
-            })
+            return successResponse(null, "Delete import successfully", 200)
         } catch (error) {
-            return sendError("Delete import failed", 500, error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
 
         }
 

@@ -5,11 +5,11 @@ import { Prisma } from "@prisma/client"
 import { NextRequest } from "next/server"
 import { RefundService } from "./refund.service"
 import { prisma } from "@/lib/prisma"
-import { sendError, sendSuccess } from "@/utils/response"
 import { CreateRefundInput } from "./refund.type"
+import { BadRequestError, errorResponse, ForbiddenError, NotFoundError, successResponse, UnauthorizedError } from "@/utils/response"
 
 export const refundController = {
-async getRefunds(req: NextRequest) {
+    async getRefunds(req: NextRequest) {
         try {
             const { page, limit, skip } = getPaginationParams(req)
             const search = getSearchParam(req)
@@ -34,12 +34,12 @@ async getRefunds(req: NextRequest) {
                 prisma.refund.count({ where })
             ])
             const meta = getPaginationMeta(total, page, limit)
-            return sendSuccess({
-                data: refund,
-                meta
-            })
+            return successResponse({ data: refund, meta }, "Get refunds successfully", 200)
         } catch (error) {
-            return sendError("Get refunds failed", 500, error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
 
         }
 
@@ -47,23 +47,25 @@ async getRefunds(req: NextRequest) {
     async getRefund(id: string) {
         try {
             const refund = await RefundService.getRefund(id)
-            return sendSuccess(refund)
+            return successResponse(refund, "Get refund successfully", 200)
         } catch (error) {
-            return sendError("Get refund failed", 500, error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
     },
 
     async createRefund(req: NextRequest) {
         try {
             const body: CreateRefundInput = await req.json()
-            if (!body) {
-                return sendError("Invalid data", 400)
-            }
             const refund = await RefundService.createRefund(body)
-            return sendSuccess(refund, "Refund created successfully")
+            return successResponse(refund, "Create refund successfully", 201)
         } catch (error) {
             console.log(error)
-            return sendError("Create refund failed", 500, error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
     }
 

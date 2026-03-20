@@ -1,11 +1,9 @@
-
-
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { CreateSaleInput } from "./sale.type"
+import { BadRequestError, NotFoundError } from "@/utils/response"
 
 export const saleService = {
-
     async getSales(options?: Prisma.SaleFindManyArgs) {
 
         return prisma.sale.findMany({
@@ -39,7 +37,7 @@ export const saleService = {
         })
 
         if (!sale) {
-            throw new Error("Sale not found")
+            throw new NotFoundError("Sale not found")
         }
 
         return sale
@@ -51,12 +49,12 @@ export const saleService = {
 
             // ✅ 1. validation
             if (!data.sale_details || data.sale_details.length === 0) {
-                throw new Error("Sale must have at least one item")
+                throw new BadRequestError("Sale must have at least one item")
             }
             const items = data.sale_details
 
             if (items.some(i => i.quantity <= 0)) {
-                throw new Error("Invalid quantity")
+                throw new BadRequestError("Invalid quantity")
             }
 
             // 🔍 2. fetch products
@@ -75,11 +73,11 @@ export const saleService = {
                 const product = productMap.get(item.product_id)
 
                 if (!product) {
-                    throw new Error("Product not found")
+                    throw new NotFoundError("Product not found")
                 }
 
                 if (product.stock_qty < item.quantity) {
-                    throw new Error(
+                    throw new BadRequestError(
                         `Insufficient stock for product ${product.product_name}`
                     )
                 }
@@ -129,17 +127,11 @@ export const saleService = {
                     }
                 })
             }
-
+            if (!result) {
+                throw new BadRequestError("Failed to create sale")
+            }
             return result
         })
     },
-
-    async deleteSale(id: string) {
-
-        return prisma.sale.delete({
-            where: { sale_id: id }
-        })
-
-    }
 
 }

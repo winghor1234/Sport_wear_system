@@ -1,12 +1,13 @@
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
-import { CreateEmployeeInput, UpdateEmployeeInput } from "./employeetype"
+import { UpdateEmployeeInput } from "./employeetype"
+import { BadRequestError, NotFoundError } from "@/utils/response"
 
 export const employeeService = {
 
     async getEmployees(options?: Prisma.EmployeeFindManyArgs) {
 
-        return prisma.employee.findMany({
+        const employees = await prisma.employee.findMany({
             ...options,
             include: {
                 purchases: true,
@@ -14,6 +15,10 @@ export const employeeService = {
                 sales: true
             }
         })
+        if (!employees) {
+            throw new NotFoundError("Employees not found")
+        }
+        return employees
 
     },
 
@@ -27,31 +32,38 @@ export const employeeService = {
                 sales: true,
             }
         })
-
         if (!employee) {
-            throw new Error("Employee not found")
+            throw new NotFoundError("Employee not found")
         }
-
         return employee
 
     },
 
-    // async createEmployee(data: CreateEmployeeInput) {
-    //     return prisma.employee.create({
-    //         data
-    //     })
-    // },
 
     async updateEmployee(id: string, data: UpdateEmployeeInput) {
-        return prisma.employee.update({
+        const employee = await  prisma.employee.update({
             where: { employee_id: id },
             data
         })
+        if (!employee) {
+            throw new BadRequestError("Failed to update employee")
+        }
+        return employee
     },
 
     async deleteEmployee(id: string) {
-        return prisma.employee.delete({
+        const employee = await prisma.employee.findUnique({
             where: { employee_id: id }
+        })
+
+        if (!employee) {
+            throw new NotFoundError("Employee not found")
+        }
+        return prisma.employee.update({
+            where: { employee_id: id },
+            data: {
+                is_active: false
+            }
         })
 
     }

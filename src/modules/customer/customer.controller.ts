@@ -3,10 +3,10 @@ import { prisma } from "@/lib/prisma"
 import { getPaginationParams, getPaginationMeta } from "@/utils/pagination"
 import { getSearchParam } from "@/utils/search"
 import { getSortingParams } from "@/utils/sorting"
-import { sendError, sendSuccess } from "@/utils/response"
 import { Prisma } from "@prisma/client"
 import { NextRequest } from "next/server"
-import { CreateCustomerInput, UpdateCustomerInput } from "./customer.type"
+import { UpdateCustomerInput } from "./customer.type"
+import { BadRequestError, errorResponse, ForbiddenError, NotFoundError, successResponse, UnauthorizedError } from "@/utils/response"
 
 export const customerController = {
 
@@ -33,53 +33,49 @@ export const customerController = {
                 prisma.customer.count({ where })
             ])
             const meta = getPaginationMeta(total, page, limit)
-            return sendSuccess({
-                data: customers,
-                meta
-            })
+            return successResponse({ data: customers, meta }, "Get customers successfully", 200)
         } catch (error) {
-            return sendError("Get customers failed", 500, error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
     },
 
     async getCustomer(id: string) {
         try {
             const customer = await customerService.getCustomer(id)
-            return sendSuccess(customer)
+            return successResponse(customer, "Get customer successfully", 200)
         } catch (error) {
-            return sendError("Get customer failed", 500, error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
     },
-
-    // async createCustomer(req: Request) {
-    //     try {
-    //         const body: CreateCustomerInput = await req.json()
-    //         const customer = await customerService.createCustomer(body)
-    //         return sendSuccess(customer)
-    //     } catch (error) {
-    //         console.log(error)
-    //         return sendError("Create customer failed", 500, error)
-    //     }
-    // },
 
     async updateCustomer(req: Request, id: string) {
         try {
             const body: UpdateCustomerInput = await req.json()
             const customer = await customerService.updateCustomer(id, body)
-            return sendSuccess(customer)
+            return successResponse(customer, "Update customer successfully", 200)
         } catch (error) {
-            return sendError("Update customer failed", 500, error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
     },
 
     async deleteCustomer(id: string) {
         try {
             await customerService.deleteCustomer(id)
-            return sendSuccess({
-                message: "Customer deleted"
-            })
+            return successResponse(null, "Delete customer successfully", 200)
         } catch (error) {
-            return sendError("Delete customer failed", 500, error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
 
         }
 

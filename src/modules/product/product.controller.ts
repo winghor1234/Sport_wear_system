@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest } from "next/server"
 import { productService } from "./product.service"
-import { sendSuccess, sendError, sendCreated } from "@/utils/response"
+import { BadRequestError, NotFoundError, ForbiddenError, UnauthorizedError, errorResponse, successResponse } from "@/utils/response"
 import { getPaginationMeta, getPaginationParams } from "@/utils/pagination"
 import { getSearchParam } from "@/utils/search"
 import { getSortingParams } from "@/utils/sorting"
@@ -34,13 +34,13 @@ export const productController = {
                 prisma.product.count({ where })
             ])
             const meta = getPaginationMeta(total, page, limit)
-            return sendSuccess({
-                data: products,
-                meta
-            })
+            return successResponse({ data: products, meta }, "Get products successfully", 200)
 
         } catch (error) {
-            return sendError("Failed to get products", 500, error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
 
     },
@@ -48,9 +48,12 @@ export const productController = {
     async getProduct(req: NextRequest, id: string) {
         try {
             const product = await productService.getProduct(id)
-            return sendSuccess(product)
+            return successResponse(product, "Get product successfully", 200)
         } catch (error) {
-            return sendError("Failed to fetch product", 500, error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
 
         }
     },
@@ -68,13 +71,16 @@ export const productController = {
                 folder: "products",
                 files: formData.getAll("images") as File[]
             });
-            return sendCreated(product);
+            return successResponse(product, "Product created successfully", 201);
         } catch (error) {
-            return sendError("Create product failed", 500, error);
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
     },
 
-    async updateProduct(req: NextRequest, id: string ) {
+    async updateProduct(req: NextRequest, id: string) {
         try {
             const formData = await req.formData();
             const product = await productService.updateProduct(id, {
@@ -85,30 +91,37 @@ export const productController = {
                 category_id: formDataParser.string(formData, "categoryId"),
                 files: formData.getAll("images") as File[]
             });
-            return sendSuccess(product);
+            return successResponse(product, "Product updated successfully", 201);
         } catch (error) {
-            return sendError("Update product failed", 500, error);
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
 
         }
     },
-    async deleteImage(req: NextRequest,  id: string ) {
+    async deleteImage(req: NextRequest, id: string) {
         try {
             const image = await productService.deleteImage(id);
-            return sendSuccess(image);
+            return successResponse(image, "Image deleted successfully", 200);
         } catch (error) {
-            return sendError("Delete image failed", 500, error);
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
     },
 
     async deleteProduct(req: NextRequest, id: string) {
         try {
             const product = await productService.deleteProduct(id)
-            return sendSuccess(product)
+            return successResponse(product, "Product deleted successfully", 200)
         } catch (error) {
             console.log(error)
-            return sendError("Failed to delete product", 500, error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
-    }   
+    }
 
 
 }

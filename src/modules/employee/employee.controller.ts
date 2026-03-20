@@ -2,11 +2,11 @@ import { prisma } from "@/lib/prisma"
 import { getPaginationParams, getPaginationMeta } from "@/utils/pagination"
 import { getSearchParam } from "@/utils/search"
 import { getSortingParams } from "@/utils/sorting"
-import { sendError, sendSuccess } from "@/utils/response"
 import { Prisma } from "@prisma/client"
 import { NextRequest } from "next/server"
 import { employeeService } from "./employee.service"
-import {  UpdateEmployeeInput } from "./employeetype"
+import { UpdateEmployeeInput } from "./employeetype"
+import { BadRequestError, errorResponse, ForbiddenError, NotFoundError, successResponse, UnauthorizedError } from "@/utils/response"
 
 export const employeeController = {
 
@@ -33,54 +33,51 @@ export const employeeController = {
                 prisma.employee.count({ where })
             ])
             const meta = getPaginationMeta(total, page, limit)
-            return sendSuccess({
-                data: employees,
-                meta
-            })
+
+            return successResponse({ data: employees, meta }, "Get employees successfully", 200);
         } catch (error) {
             console.log(error)
-            return sendError("Get employees failed", 500, error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
     },
 
     async getEmployee(id: string) {
         try {
             const employee = await employeeService.getEmployee(id)
-            return sendSuccess(employee)
+            return successResponse(employee, "Get employee successfully", 200)
         } catch (error) {
-            return sendError("Get employee failed", 500, error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
     },
 
-    // async createEmployee(req: Request) {
-    //     try {
-    //         const body: CreateEmployeeInput = await req.json()
-    //         const employee = await employeeService.createEmployee(body)
-    //         return sendSuccess(employee)
-    //     } catch (error) {
-    //         console.log(error)
-    //         return sendError("Create employee failed", 500, error)
-    //     }
-    // },
 
     async updateEmployee(req: Request, id: string) {
         try {
             const body: UpdateEmployeeInput = await req.json()
             const employee = await employeeService.updateEmployee(id, body)
-            return sendSuccess(employee)
+            return successResponse(employee, "Update employee successfully", 200)
         } catch (error) {
-            return sendError("Update employee failed", 500, error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
     },
 
     async deleteEmployee(id: string) {
         try {
             await employeeService.deleteEmployee(id)
-            return sendSuccess({
-                message: "Employee deleted"
-            })
+            return successResponse(null, "Delete employee successfully", 200)
         } catch (error) {
-            return sendError("Delete employee failed", 500, error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
 
         }
 

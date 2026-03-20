@@ -3,11 +3,10 @@ import { prisma } from "@/lib/prisma"
 import { getPaginationParams, getPaginationMeta } from "@/utils/pagination"
 import { getSearchParam } from "@/utils/search"
 import { getSortingParams } from "@/utils/sorting"
-import { sendError, sendSuccess } from "@/utils/response"
-import { handleError } from "@/utils/errorHandler"
 import { Prisma } from "@prisma/client"
 import { NextRequest } from "next/server"
 import { CreateSupplierInput, UpdateSupplierInput } from "./supplier.type"
+import { BadRequestError, errorResponse, ForbiddenError, NotFoundError, successResponse, UnauthorizedError } from "@/utils/response"
 
 
 export const supplierController = {
@@ -34,21 +33,24 @@ export const supplierController = {
                 prisma.supplier.count({ where })
             ])
             const meta = getPaginationMeta(total, page, limit)
-            return sendSuccess({
-                data: suppliers,
-                meta
-            })
+            return successResponse({ data: suppliers, meta }, "Get suppliers successfully", 200)
         } catch (error) {
-            return handleError(error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
     },
 
     async getSupplier(id: string) {
         try {
             const supplier = await supplierService.getSupplier(id)
-            return sendSuccess(supplier)
+            return successResponse(supplier, "Get supplier successfully", 200)
         } catch (error) {
-            return sendError("Get supplier error", 500, error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
     },
 
@@ -56,10 +58,12 @@ export const supplierController = {
         try {
             const body: CreateSupplierInput = await req.json()
             const supplier = await supplierService.createSupplier(body)
-            return sendSuccess(supplier)
+            return successResponse(supplier, "Create supplier successfully", 201)
         } catch (error) {
             console.log(error)
-            return sendError("Create supplier error", 500, error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
     },
 
@@ -67,20 +71,24 @@ export const supplierController = {
         try {
             const body: UpdateSupplierInput = await req.json()
             const supplier = await supplierService.updateSupplier(id, body)
-            return sendSuccess(supplier)
+            return successResponse(supplier, "Update supplier successfully", 200)
         } catch (error) {
-            return sendError("Update supplier error", 500, error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
     },
 
     async deleteSupplier(id: string) {
         try {
             await supplierService.deleteSupplier(id)
-            return sendSuccess({
-                message: "Supplier deleted"
-            })
+            return successResponse(null, "Delete supplier successfully", 200)
         } catch (error) {
-            return sendError("Delete supplier error", 500, error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
     }
 }

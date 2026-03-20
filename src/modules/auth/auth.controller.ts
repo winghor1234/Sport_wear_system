@@ -2,7 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { authService } from "./auth.service"
-import { sendSuccess, sendError, BadRequestError, NotFoundError, ForbiddenError, UnauthorizedError, errorResponse } from "@/utils/response"
+import { BadRequestError, NotFoundError, ForbiddenError, UnauthorizedError, errorResponse, successResponse } from "@/utils/response"
 import { LoginInput, CustomerRegisterInput, EmployeeRegisterInput } from "./auth.type"
 import { clearAuthCookies, setAuthCookies } from "@/utils/cookie"
 import { verifyAccessToken } from "@/utils/jwt"
@@ -15,11 +15,11 @@ export const authController = {
         try {
             const body: CustomerRegisterInput = await req.json();
             if (!body.email || !body.password) {
-                return sendError("Email and password are required", 400);
+                throw new BadRequestError("Email and password are required");
             }
             const result = await authService.customerRegister(body);
             const { password, ...safeUser } = result.user;
-            const response = sendSuccess(safeUser, "User registered successfully");
+            const response = successResponse(safeUser, "User registered successfully", 201);
             setAuthCookies({
                 response,
                 accessToken: result.accessToken,
@@ -31,7 +31,7 @@ export const authController = {
             if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
                 return errorResponse(error.message, error.statusCode);
             }
-            return sendError("Register failed", 500);
+            return errorResponse("Internal Server Error", 500)
         }
 
     },
@@ -45,7 +45,7 @@ export const authController = {
             await loginLimiter.consume(key)
             const result = await authService.customerLogin(body)
             const { password, ...safeUser } = result.user
-            const response = sendSuccess(safeUser, "Login successful")
+            const response = successResponse(safeUser, "Login successful", 200)
             setAuthCookies({
                 response,
                 accessToken: result.accessToken,
@@ -53,10 +53,11 @@ export const authController = {
             })
             return response
         } catch (error) {
+            console.log(error)
             if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
                 return errorResponse(error.message, error.statusCode);
             }
-            return sendError("Login failed", 401)
+            return errorResponse("Internal Server Error", 500)
         }
     },
 
@@ -103,24 +104,18 @@ export const authController = {
     // ------------------------------------------------------------------------
 
     async customerForgotPassword(req: NextRequest): Promise<NextResponse> {
-
         try {
-
             const ip = req.headers.get("x-forwarded-for") || "unknown"
-
             await otpLimiter.consume(ip)
-
             const body = await req.json()
-
             const result = await authService.customerForgotPassword(body.email)
-
-            return sendSuccess(result, "OTP sent")
-
+            return successResponse(result, "OTP sent", 200)
         } catch (error) {
+            console.log(error)
             if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
                 return errorResponse(error.message, error.statusCode);
             }
-            return sendError("Login failed", 401)
+            return errorResponse("Internal Server Error", 500)
         }
 
     },
@@ -128,11 +123,12 @@ export const authController = {
         try {
             const body = await req.json();
             if (!body.email || !body.otp) {
-                return sendError("Email and OTP are required", 400);
+                throw new BadRequestError("Email and OTP are required");
             }
             await authService.customerVerifyOTP(body.email, body.otp);
-            return sendSuccess(null, "OTP verified");
+            return successResponse(null, "OTP verified", 200);
         } catch (error) {
+            console.log(error)
             if (
                 error instanceof BadRequestError ||
                 error instanceof NotFoundError ||
@@ -141,18 +137,19 @@ export const authController = {
             ) {
                 return errorResponse(error.message, error.statusCode);
             }
-            return sendError("OTP verification failed", 500);
+            return errorResponse("Internal Server Error", 500)
         }
     },
     async customerResetPassword(req: NextRequest): Promise<NextResponse> {
         try {
             const body = await req.json();
             if (!body.email || !body.password) {
-                return sendError("Email and new password are required", 400);
+                throw new BadRequestError("Email and new password are required");
             }
             await authService.customerResetPassword(body.email, body.password);
-            return sendSuccess(null, "Password reset successful");
+            return successResponse(null, "Password reset successful", 200);
         } catch (error) {
+            console.log(error)
             if (
                 error instanceof BadRequestError ||
                 error instanceof NotFoundError ||
@@ -161,29 +158,23 @@ export const authController = {
             ) {
                 return errorResponse(error.message, error.statusCode);
             }
-            return sendError("Reset password failed", 500);
+            return errorResponse("Internal Server Error", 500)
         }
     },
 
     async customerLogout(req: NextRequest): Promise<NextResponse> {
-
         try {
-
             const payload = verifyAccessToken(req);
-
             await authService.customerLogout(payload.user_id);
-
-            const response = sendSuccess(null, "Logout successful");
-
+            const response = successResponse(null, "Logout successful", 200);
             clearAuthCookies(response);
-
             return response;
-
         } catch (error) {
+            console.log(error)
             if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
                 return errorResponse(error.message, error.statusCode);
             }
-            return sendError("Logout failed", 500);
+            return errorResponse("Internal Server Error", 500)
         }
     },
 
@@ -192,10 +183,10 @@ export const authController = {
         try {
             const refreshToken = req.cookies.get("refresh_token")?.value;
             if (!refreshToken) {
-                return sendError("Refresh token missing", 401);
+                throw new BadRequestError("Refresh token missing");
             }
             const result = await authService.refreshToken(refreshToken);
-            const response = sendSuccess(null, "Token refreshed");
+            const response = successResponse(null, "Token refreshed", 200);
             setAuthCookies({
                 response,
                 accessToken: result.accessToken,
@@ -203,10 +194,11 @@ export const authController = {
             });
             return response;
         } catch (error) {
+            console.log(error)
             if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
                 return errorResponse(error.message, error.statusCode);
             }
-            return sendError("Refresh failed", 500);
+            return errorResponse("Internal Server Error", 500)
         }
     },
 
@@ -218,11 +210,11 @@ export const authController = {
         try {
             const body: EmployeeRegisterInput = await req.json();
             if (!body.email || !body.password) {
-                return sendError("Email and password are required", 400);
+                throw new BadRequestError("Email and password are required");
             }
             const result = await authService.adminRegister(body);
             const { password, ...safeUser } = result.user;
-            const response = sendSuccess(safeUser, "User registered successfully");
+            const response = successResponse(safeUser, "User registered successfully", 201);
             setAuthCookies({
                 response,
                 accessToken: result.accessToken,
@@ -230,10 +222,11 @@ export const authController = {
             });
             return response;
         } catch (error) {
+            console.log(error)
             if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
                 return errorResponse(error.message, error.statusCode);
             }
-            return sendError("Register failed", 500);
+            return errorResponse("Internal Server Error", 500)
         }
 
     },
@@ -248,7 +241,7 @@ export const authController = {
             await loginLimiter.consume(key)
             const result = await authService.adminLogin(body);
             // const { password, ...safeUser } = result.user;
-            const response = sendSuccess(result, "Login successful");
+            const response = successResponse(result.user, "Login successful", 200);
             setAuthCookies({
                 response,
                 accessToken: result.accessToken,
@@ -256,28 +249,27 @@ export const authController = {
             });
             return response;
         } catch (error) {
+            console.log(error)
             if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
                 return errorResponse(error.message, error.statusCode);
             }
-            return sendError("Login failed", 500);
+            return errorResponse("Internal Server Error", 500)
         }
     },
 
     async adminForgotPassword(req: NextRequest): Promise<NextResponse> {
-
         try {
-
             const ip = req.headers.get("x-forwarded-for") || "unknown"
             await otpLimiter.consume(ip)
             const body = await req.json()
             const result = await authService.adminForgotPassword(body.email)
-            return sendSuccess(result, "OTP sent")
+            return successResponse(result, "OTP sent", 200)
 
         } catch (error) {
             if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
                 return errorResponse(error.message, error.statusCode);
             }
-            return sendError("Login failed", 401)
+            return errorResponse("Internal Server Error", 500)
         }
 
     },
@@ -285,10 +277,10 @@ export const authController = {
         try {
             const body = await req.json();
             if (!body.email || !body.otp) {
-                return sendError("Email and OTP are required", 400);
+                throw new BadRequestError("Email and OTP are required");
             }
             await authService.adminVerifyOTP(body.email, body.otp);
-            return sendSuccess(null, "OTP verified");
+            return successResponse(null, "OTP verified", 200);
         } catch (error) {
             if (
                 error instanceof BadRequestError ||
@@ -298,17 +290,17 @@ export const authController = {
             ) {
                 return errorResponse(error.message, error.statusCode);
             }
-            return sendError("OTP verification failed", 500);
+            return errorResponse("Internal Server Error", 500)
         }
     },
     async adminResetPassword(req: NextRequest): Promise<NextResponse> {
         try {
             const body = await req.json();
             if (!body.email || !body.password) {
-                return sendError("Email and new password are required", 400);
+                throw new BadRequestError("Email and new password are required");
             }
             await authService.adminResetPassword(body.email, body.password);
-            return sendSuccess(null, "Password reset successful");
+            return successResponse(null, "Password reset successful", 200);
         } catch (error) {
             if (
                 error instanceof BadRequestError ||
@@ -318,7 +310,7 @@ export const authController = {
             ) {
                 return errorResponse(error.message, error.statusCode);
             }
-            return sendError("Reset password failed", 500);
+            return errorResponse("Internal Server Error", 500)
         }
     },
 
@@ -327,14 +319,15 @@ export const authController = {
         try {
             const payload = verifyAccessToken(req);
             await authService.adminLogout(payload.user_id);
-            const response = sendSuccess(null, "Logout successful");
+            const response = successResponse(null, "Logout successful", 200);
             clearAuthCookies(response);
             return response;
         } catch (error) {
+            console.log(error)
             if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
                 return errorResponse(error.message, error.statusCode);
             }
-            return sendError("Logout failed", 500);
+            return errorResponse("Internal Server Error", 500);
         }
     },
 
@@ -343,10 +336,10 @@ export const authController = {
         try {
             const refreshToken = req.cookies.get("refresh_token")?.value;
             if (!refreshToken) {
-                return sendError("Refresh token missing", 401);
+                throw new BadRequestError("Refresh token missing");
             }
             const result = await authService.adminRefreshToken(refreshToken);
-            const response = sendSuccess(null, "Token refreshed");
+            const response = successResponse(null, "Token refreshed", 200);
             setAuthCookies({
                 response,
                 accessToken: result.accessToken,
@@ -357,7 +350,7 @@ export const authController = {
             if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
                 return errorResponse(error.message, error.statusCode);
             }
-            return sendError("Refresh failed", 500);
+            return errorResponse("Internal Server Error", 500)
         }
     },
 

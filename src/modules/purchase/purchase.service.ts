@@ -3,12 +3,11 @@
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { CreatePurchaseInput, UpdatePurchaseInput } from "./purchase.type"
+import { BadRequestError, NotFoundError } from "@/utils/response"
 
 export const purchaseService = {
-
     async getPurchases(options?: Prisma.PurchaseOrderFindManyArgs) {
-
-        return prisma.purchaseOrder.findMany({
+        const purchases = await prisma.purchaseOrder.findMany({
             ...options,
             include: {
                 supplier: true,
@@ -20,11 +19,13 @@ export const purchaseService = {
                 }
             }
         })
-
+        if (!purchases) {
+            throw new NotFoundError("Purchases not found")
+        }
+        return purchases
     },
 
     async getPurchase(id: string) {
-
         const purchase = await prisma.purchaseOrder.findUnique({
             where: { purchase_id: id },
             include: {
@@ -37,13 +38,10 @@ export const purchaseService = {
                 }
             }
         })
-
         if (!purchase) {
-            throw new Error("Purchase not found")
+            throw new NotFoundError("Purchase not found")
         }
-
         return purchase
-
     },
 
 
@@ -51,12 +49,11 @@ export const purchaseService = {
     async createPurchase(data: CreatePurchaseInput, userId: string) {
         return prisma.$transaction(async (tx) => {
             if (!data.purchase_details.length) {
-                throw new Error("Purchase must have at least one item")
+                throw new BadRequestError("Purchase must have at least one item")
             }
-
             const total = data.purchase_details.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
-            return tx.purchaseOrder.create({
+            const purchase = await tx.purchaseOrder.create({
                 data: {
                     supplier_id: data.supplier_id,
                     employee_id: userId,
@@ -68,12 +65,15 @@ export const purchaseService = {
                 },
                 include: { purchase_details: true }
             })
+            if (!purchase) {
+                throw new NotFoundError("Failed to create purchase")
+            }
+            return purchase
         })
     },
 
     async updatePurchase(id: string, data: UpdatePurchaseInput) {
         return prisma.$transaction(async (tx) => {
-
             const existing = await tx.purchaseOrder.findUnique({
                 where: { purchase_id: id },
                 include: {
@@ -83,24 +83,24 @@ export const purchaseService = {
             })
 
             if (!existing) {
-                throw new Error("Purchase not found")
+                throw new NotFoundError("Purchase not found")
             }
 
             if (existing.imports.length > 0) {
-                throw new Error("Cannot update purchase after import")
+                throw new BadRequestError("Cannot update purchase after import")
             }
 
             if (existing.status !== "pending") {
-                throw new Error("Only pending purchase can be updated")
+                throw new BadRequestError("Only pending purchase can be updated")
             }
 
             // ✅ validation
             if (!data.purchase_details || data.purchase_details.length === 0) {
-                throw new Error("Purchase must have at least one item")
+                throw new BadRequestError("Purchase must have at least one item")
             }
 
             if (data.purchase_details.some(item => item.quantity <= 0)) {
-                throw new Error("Invalid quantity")
+                throw new BadRequestError("Invalid quantity")
             }
 
             // ✅ check supplier
@@ -109,7 +109,7 @@ export const purchaseService = {
             })
 
             if (!supplier) {
-                throw new Error("Supplier not found")
+                throw new NotFoundError("Supplier not found")
             }
 
             // ✅ calculate total (สำคัญมาก)
@@ -121,7 +121,7 @@ export const purchaseService = {
             })
 
             // 🔁 update
-            return tx.purchaseOrder.update({
+            const purchase = await tx.purchaseOrder.update({
                 where: { purchase_id: id },
                 data: {
                     supplier_id: data.supplier_id,
@@ -134,12 +134,16 @@ export const purchaseService = {
                 include: {
                     purchase_details: true
                 }
-            })
+            });
+            if (!purchase) {
+                throw new BadRequestError("Failed to update purchase")
+            }
+            return purchase
         })
     },
 
     async deletePurchase(id: string) {
-        return prisma.$transaction(async (tx) => {
+        const result = await prisma.$transaction(async (tx) => {
 
             // 🔍 1. หา purchase
             const existing = await tx.purchaseOrder.findUnique({
@@ -150,24 +154,26 @@ export const purchaseService = {
             })
 
             if (!existing) {
-                throw new Error("Purchase not found")
+                throw new NotFoundError("Purchase not found")
             }
 
             // ❌ 2. ห้ามลบถ้ามี import
             if (existing.imports.length > 0) {
-                throw new Error("Cannot delete purchase with existing imports")
+                throw new BadRequestError("Cannot delete purchase with existing imports")
             }
 
             // ❌ 3. optional: check status
             if (existing.status !== "pending") {
-                throw new Error("Only pending purchase can be deleted")
+                throw new BadRequestError("Only pending purchase can be deleted")
             }
 
             // 🗑️ 4. delete purchase (details จะ cascade)
             await tx.purchaseOrder.delete({
                 where: { purchase_id: id }
             })
-
+            if (!result) {
+                throw new BadRequestError("Failed to delete purchase")
+            }
             return { message: "Purchase deleted successfully" }
         })
     }

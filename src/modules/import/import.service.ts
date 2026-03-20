@@ -2,12 +2,13 @@
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { CreateImportInput } from "./import.type"
+import { BadRequestError, ForbiddenError, NotFoundError } from "@/utils/response"
 
 export const importService = {
 
     async getImports(options?: Prisma.ImportFindManyArgs) {
 
-        return prisma.import.findMany({
+        const imports = await prisma.import.findMany({
             ...options,
             include: {
                 employee: true,
@@ -19,6 +20,10 @@ export const importService = {
                 }
             }
         })
+        if (!imports) {
+            throw new NotFoundError("Imports not found")
+        }
+        return imports
 
     },
 
@@ -36,7 +41,7 @@ export const importService = {
             }
         })
         if (!record) {
-            throw new Error("Import not found")
+            throw new NotFoundError("Import not found")
         }
         return record
     },
@@ -53,11 +58,11 @@ export const importService = {
             })
 
             if (!purchase) {
-                throw new Error("Purchase not found")
+               throw new NotFoundError("Purchase not found")
             }
 
             if (purchase.status !== "pending") {
-                throw new Error("Only pending purchase can be imported")
+                throw new BadRequestError("Only pending purchase can be imported")
             }
 
             // 🔍 map purchase detail
@@ -65,19 +70,20 @@ export const importService = {
                 purchase.purchase_details.map(d => [d.product_id, d])
             )
 
+
             // ✅ 2. validate import
-            for (const item of data.import_details) {
+            for (const item of data.item) {
                 const purchaseDetail = detailMap.get(item.product_id)
 
                 if (!purchaseDetail) {
-                    throw new Error("Product not in purchase")
+                    throw new NotFoundError("Product not in purchase")
                 }
 
                 const remaining = purchaseDetail.quantity - purchaseDetail.received_qty
 
                 if (item.quantity > remaining) {
-                    throw new Error(
-                        `Import quantity exceeds remaining for product ${item.product_id}`
+                    throw new BadRequestError(
+                        `Import quantity exceeds remaining for product`
                     )
                 }
             }
@@ -88,14 +94,14 @@ export const importService = {
                     purchase_id: data.purchase_id,
                     employee_id: userId,
                     import_details: {
-                        create: data.import_details
+                        create: data.item
                     }
                 },
                 include: { import_details: true }
             })
 
             // 🔁 4. update purchase_detail + product stock
-            for (const item of data.import_details) {
+            for (const item of data.item) {
 
                 // update received_qty
                 await tx.purchaseDetail.updateMany({
@@ -136,6 +142,9 @@ export const importService = {
                     data: { status: "completed" }
                 })
             }
+            if (!newImport) {
+                throw new BadRequestError("Failed to create import")
+            }
 
             return newImport
         })
@@ -154,12 +163,12 @@ export const importService = {
             })
 
             if (!existing) {
-                throw new Error("Import not found")
+                throw new NotFoundError("Import not found")
             }
 
             // ❗ optional: ห้ามลบถ้า purchase completed แล้ว
             if (existing.purchase.status === "completed") {
-                throw new Error("Cannot delete import from completed purchase")
+                throw new BadRequestError("Cannot delete import from completed purchase")
             }
 
             // 🔁 2. rollback stock + received_qty

@@ -6,5 +6,5 @@ export type ImportItemInput = {
 
 export type CreateImportInput = {
     purchase_id: string
-    import_details: ImportItemInput[]
+    item: ImportItemInput[]
 }

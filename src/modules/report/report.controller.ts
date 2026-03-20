@@ -1,162 +1,122 @@
+import { BadRequestError, errorResponse, ForbiddenError, NotFoundError, successResponse, UnauthorizedError } from "@/utils/response"
 import { reportService } from "./report.service"
-import { sendSuccess } from "@/utils/response"
-import { handleError } from "@/utils/errorHandler"
 
 export const reportController = {
-
     async productReport() {
-
         try {
-
             const data = await reportService.getProductReport()
-
-            return sendSuccess(data)
-
+            return successResponse(data, "Get product report successfully", 200)
         } catch (error) {
-
-            return handleError(error)
-
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
-
     },
 
     async purchaseReport() {
-
         try {
-
             const data = await reportService.getPurchaseReport()
-
-            return sendSuccess(data)
-
+            return successResponse(data, "Get purchase report successfully", 200)
         } catch (error) {
-
-            return handleError(error)
-
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
-
     },
 
     async importReport() {
-
         try {
-
             const data = await reportService.getImportReport()
-
-            return sendSuccess(data)
-
+            return successResponse(data, "Get import report successfully", 200)
         } catch (error) {
-
-            return handleError(error)
-
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
-
     },
 
     async customerReport() {
-
         try {
-
             const data = await reportService.getCustomerReport()
-
-            return sendSuccess(data)
-
+            return successResponse(data, "Get customer report successfully", 200)
         } catch (error) {
-
-            return handleError(error)
-
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
-
     },
 
     async salesQuantityReport() {
-
         try {
-
             const data = await reportService.getSalesQuantityReport()
-
-            return sendSuccess(data)
-
+            return successResponse(data, "Get sales quantity report successfully", 200)
         } catch (error) {
-
-            return handleError(error)
-
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
-
     },
 
     async revenueReport() {
-
         try {
-
             const data = await reportService.getRevenueReport()
-
-            return sendSuccess(data)
-
+            return successResponse(data, "Get revenue report successfully", 200)
         } catch (error) {
-
-            return handleError(error)
-
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
-
     },
 
     async topProductsReport() {
-
         try {
-
             const data = await reportService.getTopSellingProducts()
-
-            return sendSuccess(data)
-
+            return successResponse(data, "Get top products report successfully", 200)
         } catch (error) {
-
-            return handleError(error)
-
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
-
     },
 
     async lowStockReport() {
-
         try {
-
             const data = await reportService.getLowStockProducts()
-
-            return sendSuccess(data)
-
+            return successResponse(data, "Get low stock report successfully", 200)
         } catch (error) {
-
-            return handleError(error)
-
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
-
     },
     async monthlyRevenueReport() {
-
         try {
-
             const data = await reportService.getMonthlyRevenue()
-
-            return sendSuccess(data)
-
+            return successResponse(data, "Get monthly revenue report successfully", 200)
         } catch (error) {
-
-            return handleError(error)
-
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
         }
-
     },
     async dashboardReport() {
-
         try {
-
             const data = await reportService.getDashboardSummary()
-
-            return sendSuccess(data)
-
+            return successResponse(data, "Get dashboard report successfully", 200)
         } catch (error) {
-
-            return handleError(error)
+            console.log(error)
+            if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
+                return errorResponse(error.message, error.statusCode);
+            }
 
         }
 

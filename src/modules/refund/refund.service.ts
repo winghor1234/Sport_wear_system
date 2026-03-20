@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma"
 import { CreateRefundInput } from "./refund.type"
 import { Prisma } from "@prisma/client"
+import { BadRequestError, NotFoundError } from "@/utils/response"
 
 export const RefundService = {
     async createRefund(data: CreateRefundInput) {
@@ -8,11 +9,11 @@ export const RefundService = {
 
             // ✅ 2. validation
             if (!data.refund_details || data.refund_details.length === 0) {
-                throw new Error("Refund must have at least one item")
+                throw new BadRequestError("Refund must have at least one item")
             }
 
             if (data.refund_details.some(i => i.quantity <= 0)) {
-                throw new Error("Invalid quantity")
+                throw new BadRequestError("Invalid quantity")
             }
 
             // 🔍 3. หา sale
@@ -22,7 +23,7 @@ export const RefundService = {
             })
 
             if (!sale) {
-                throw new Error("Sale not found")
+                throw new NotFoundError("Sale not found")
             }
 
             // 🧠 map sale detail
@@ -35,11 +36,11 @@ export const RefundService = {
                 const saleDetail = saleMap.get(item.product_id)
 
                 if (!saleDetail) {
-                    throw new Error("Product not in sale")
+                    throw new NotFoundError("Product not in sale")
                 }
 
                 if (item.quantity > saleDetail.quantity) {
-                    throw new Error("Refund exceeds sold quantity")
+                    throw new BadRequestError("Refund exceeds sold quantity")
                 }
             }
 
@@ -88,14 +89,16 @@ export const RefundService = {
                     }
                 })
             }
-
+            if (!refund) {
+                throw new BadRequestError("Failed to create refund")
+            }
             return refund
         })
     },
 
     async getRefunds(options?: Prisma.RefundFindManyArgs) {
 
-        return prisma.refund.findMany({
+        const refunds = await prisma.refund.findMany({
             ...options,
             include: {
                 refund_details: true,
@@ -111,6 +114,10 @@ export const RefundService = {
                 createdAt: "desc"
             }
         })
+        if (!refunds) {
+            throw new NotFoundError("Refunds not found")
+        }
+        return refunds
 
     },
 
@@ -128,7 +135,7 @@ export const RefundService = {
         })
 
         if (!refund) {
-            throw new Error("Refund not found")
+            throw new NotFoundError("Refund not found")
         }
 
         return refund

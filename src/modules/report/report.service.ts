@@ -1,24 +1,23 @@
-
-
 import { prisma } from "@/lib/prisma"
+import { NotFoundError } from "@/utils/response"
 
 export const reportService = {
-
     // Product Report
     async getProductReport() {
-
-        return prisma.product.findMany({
+        const products = await prisma.product.findMany({
             include: {
                 category: true
             }
         })
-
+        if (!products) {
+            throw new NotFoundError("Products not found")
+        }
+        return products
     },
 
     // Purchase Report
     async getPurchaseReport() {
-
-        return prisma.purchaseOrder.findMany({
+        const purchases = await prisma.purchaseOrder.findMany({
             include: {
                 supplier: true,
                 employee: true,
@@ -30,12 +29,16 @@ export const reportService = {
             }
         })
 
+        if (!purchases) {
+            throw new NotFoundError("Purchases not found");
+        }
+        return purchases;
+
     },
 
     // Import Report
     async getImportReport() {
-
-        return prisma.import.findMany({
+        const imports = await prisma.import.findMany({
             include: {
                 employee: true,
                 purchase: true,
@@ -46,20 +49,25 @@ export const reportService = {
                 }
             }
         })
+        if (!imports) {
+            throw new NotFoundError("Imports not found")
+        }
+        return imports
 
     },
 
     // Customer Report
     async getCustomerReport() {
-
-        return prisma.customer.findMany()
-
+        const customers = await prisma.customer.findMany()
+        if (!customers) {
+            throw new NotFoundError("Customers not found")
+        }
+        return customers
     },
 
     // Sales Quantity Report
     async getSalesQuantityReport() {
-
-        return prisma.saleDetail.groupBy({
+        const sales = await prisma.saleDetail.groupBy({
             by: ["product_id"],
             _sum: {
                 quantity: true
@@ -71,12 +79,16 @@ export const reportService = {
             }
         })
 
+        if (!sales) {
+            throw new NotFoundError("Sales not found")
+        }
+        return sales
+
     },
 
     // Top Selling Products
     async getTopSellingProducts() {
-
-        return prisma.saleDetail.groupBy({
+        const topSellingProducts = await prisma.saleDetail.groupBy({
             by: ["product_id"],
             _sum: {
                 quantity: true
@@ -88,25 +100,31 @@ export const reportService = {
             },
             take: 10
         })
+        if (!topSellingProducts) {
+            throw new NotFoundError("Top selling products not found")
+        }
+        return topSellingProducts
 
     },
 
     // Low Stock Alert
     async getLowStockProducts() {
-
-        return prisma.product.findMany({
+        const lowStockProducts = await prisma.product.findMany({
             where: {
                 stock_qty: {
                     lt: 10
                 }
             }
         })
+        if (!lowStockProducts) {
+            throw new NotFoundError("Low stock products not found")
+        }
+        return lowStockProducts
 
     },
 
     // Revenue Report
     async getRevenueReport() {
-
         const revenue = await prisma.sale.aggregate({
             _sum: {
                 total_amount: true
@@ -119,9 +137,7 @@ export const reportService = {
             }
         })
 
-        const profit =
-            (revenue._sum.total_amount || 0) -
-            (cost._sum.cost_price || 0)
+        const profit = (revenue._sum.total_amount || 0) - (cost._sum.cost_price || 0)
 
         return {
             revenue: revenue._sum.total_amount || 0,
@@ -132,7 +148,7 @@ export const reportService = {
     },
     async getMonthlyRevenue() {
 
-        return prisma.$queryRaw`
+        const revenue = await prisma.$queryRaw`
     SELECT 
       DATE_TRUNC('month', sale_date) AS month,
       SUM(total_amount) AS revenue
@@ -140,10 +156,12 @@ export const reportService = {
     GROUP BY month
     ORDER BY month ASC
   `
-
+        if (!revenue) {
+            throw new NotFoundError("Revenue not found")
+        }
+        return revenue
     },
     async getDashboardSummary() {
-
         const revenue = await prisma.sale.aggregate({
             _sum: {
                 total_amount: true
@@ -167,7 +185,5 @@ export const reportService = {
         }
 
     }
-
-
 
 }

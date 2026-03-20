@@ -1,4 +1,3 @@
-
 import { supplierController } from "@/modules/supplier/supplier.controller"
 import { NextRequest } from "next/server"
 
