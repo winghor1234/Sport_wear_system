@@ -9,9 +9,6 @@ export const reportService = {
                 category: true
             }
         })
-        if (!products) {
-            throw new NotFoundError("Products not found")
-        }
         return products
     },
 
@@ -28,10 +25,6 @@ export const reportService = {
                 }
             }
         })
-
-        if (!purchases) {
-            throw new NotFoundError("Purchases not found");
-        }
         return purchases;
 
     },
@@ -49,9 +42,6 @@ export const reportService = {
                 }
             }
         })
-        if (!imports) {
-            throw new NotFoundError("Imports not found")
-        }
         return imports
 
     },
@@ -59,9 +49,6 @@ export const reportService = {
     // Customer Report
     async getCustomerReport() {
         const customers = await prisma.customer.findMany()
-        if (!customers) {
-            throw new NotFoundError("Customers not found")
-        }
         return customers
     },
 
@@ -78,10 +65,6 @@ export const reportService = {
                 }
             }
         })
-
-        if (!sales) {
-            throw new NotFoundError("Sales not found")
-        }
         return sales
 
     },
@@ -100,9 +83,6 @@ export const reportService = {
             },
             take: 10
         })
-        if (!topSellingProducts) {
-            throw new NotFoundError("Top selling products not found")
-        }
         return topSellingProducts
 
     },
@@ -116,9 +96,6 @@ export const reportService = {
                 }
             }
         })
-        if (!lowStockProducts) {
-            throw new NotFoundError("Low stock products not found")
-        }
         return lowStockProducts
 
     },
@@ -156,9 +133,6 @@ export const reportService = {
     GROUP BY month
     ORDER BY month ASC
   `
-        if (!revenue) {
-            throw new NotFoundError("Revenue not found")
-        }
         return revenue
     },
     async getDashboardSummary() {

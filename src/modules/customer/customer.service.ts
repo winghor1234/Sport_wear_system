@@ -14,9 +14,7 @@ export const customerService = {
                 sales: true
             }
         })
-        if (!customers) {
-            throw new NotFoundError("Customers not found")
-        }
+
         return customers
 
 
@@ -33,9 +31,6 @@ export const customerService = {
             }
         })
 
-        if (!customer) {
-            throw new NotFoundError("Customer not found")
-        }
 
         return customer
 

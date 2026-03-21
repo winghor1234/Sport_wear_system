@@ -89,9 +89,6 @@ export const RefundService = {
                     }
                 })
             }
-            if (!refund) {
-                throw new BadRequestError("Failed to create refund")
-            }
             return refund
         })
     },
@@ -114,9 +111,6 @@ export const RefundService = {
                 createdAt: "desc"
             }
         })
-        if (!refunds) {
-            throw new NotFoundError("Refunds not found")
-        }
         return refunds
 
     },

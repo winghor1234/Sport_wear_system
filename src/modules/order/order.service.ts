@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { CreateOrderInput } from "./order.types"
-import { BadRequestError, ForbiddenError, NotFoundError } from "@/utils/response"
+import { BadRequestError, NotFoundError } from "@/utils/response"
 
 export const orderService = {
 
@@ -19,11 +19,7 @@ export const orderService = {
                 delivery: true
             }
         })
-        if (!orders) {
-            throw new NotFoundError("Orders not found")
-        }
         return orders
-
     },
 
     async getOrder(id: string) {
@@ -41,40 +37,63 @@ export const orderService = {
                 delivery: true
             }
         })
-
-        if (!order) {
-            throw new NotFoundError("Order not found")
-        }
-
         return order
 
     },
 
     async createOrder(data: CreateOrderInput) {
-        await prisma.$transaction(async (tx) => {
-            // ✅ check stock ก่อน
+        return prisma.$transaction(async (tx) => {
+
+            if (!data.order_details.length) {
+                throw new BadRequestError("Order must have at least one item")
+            }
+
+            // 🔍 fetch products (optimize)
+            const productIds = data.order_details.map(i => i.product_id)
+
+            const products = await tx.product.findMany({
+                where: { product_id: { in: productIds } }
+            })
+
+            const productMap = new Map(
+                products.map(p => [p.product_id, p])
+            )
+
+            // ✅ check stock
             for (const item of data.order_details) {
-                const product = await tx.product.findUnique({
-                    where: { product_id: item.product_id }
-                })
-                if (!product || product.stock_qty < item.quantity) {
+                const product = productMap.get(item.product_id)
+
+                if (!product) {
+                    throw new NotFoundError("Product not found")
+                }
+
+                if (product.stock_qty < item.quantity) {
                     throw new BadRequestError("Insufficient stock")
                 }
             }
-            const total_amount = data.order_details.reduce((acc, item) => { return acc + item.price * item.quantity }, 0)
-            // ✅ create order + details
+
+            // 💰 calculate total
+            const total_amount = data.order_details.reduce(
+                (acc, item) => acc + item.price * item.quantity,
+                0
+            )
+
+            // 🧾 create order
             const order = await tx.order.create({
                 data: {
                     customer_id: data.customer_id,
-                    total_amount: total_amount,
+                    total_amount,
+                    status: "WAITING_PAYMENT", // ✅ สำคัญ
                     order_details: {
                         create: data.order_details
                     }
                 },
-                include: { order_details: true }
+                include: {
+                    order_details: true
+                }
             })
 
-            // ✅ update stock
+            // 🔁 deduct stock
             for (const item of data.order_details) {
                 await tx.product.update({
                     where: { product_id: item.product_id },
@@ -88,7 +107,6 @@ export const orderService = {
 
             return order
         })
-
     },
 
     async deleteOrder(id: string) {
@@ -98,7 +116,8 @@ export const orderService = {
                 where: { order_id: id },
                 include: {
                     payment: true,
-                    delivery: true
+                    delivery: true,
+                    order_details: true
                 }
             })
 
@@ -106,28 +125,34 @@ export const orderService = {
                 throw new NotFoundError("Order not found")
             }
 
-            // ❌ ห้ามลบถ้ามี payment
             if (existing.payment) {
                 throw new BadRequestError("Cannot delete paid order")
             }
 
-            // ❌ ห้ามลบถ้ามี delivery
             if (existing.delivery) {
                 throw new BadRequestError("Cannot delete order with delivery")
             }
 
-            // ❌ optional: check status
-            if (existing.status !== "pending") {
-                throw new BadRequestError("Only pending order can be deleted")
+            if (existing.status !== "WAITING_PAYMENT") {
+                throw new BadRequestError("Only waiting payment order can be deleted")
             }
 
-            // 🗑️ delete
+            // 🔁 rollback stock
+            for (const item of existing.order_details) {
+                await tx.product.update({
+                    where: { product_id: item.product_id },
+                    data: {
+                        stock_qty: {
+                            increment: item.quantity
+                        }
+                    }
+                })
+            }
+
             await tx.order.delete({
                 where: { order_id: id }
             })
-            if (!existing) {
-                throw new BadRequestError("Failed to delete order")
-            }
+
             return { message: "Order deleted successfully" }
         })
     }

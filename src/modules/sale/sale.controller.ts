@@ -41,6 +41,7 @@ export const saleController = {
             if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
                 return errorResponse(error.message, error.statusCode);
             }
+return errorResponse("Internal Server Error", 500)
         }
 
     },
@@ -54,6 +55,7 @@ export const saleController = {
             if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
                 return errorResponse(error.message, error.statusCode);
             }
+return errorResponse("Internal Server Error", 500)
         }
 
     },
@@ -70,6 +72,7 @@ export const saleController = {
             if (error instanceof BadRequestError || error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof UnauthorizedError) {
                 return errorResponse(error.message, error.statusCode);
             }
+return errorResponse("Internal Server Error", 500)
         }
     },
 

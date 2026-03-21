@@ -19,9 +19,6 @@ export const purchaseService = {
                 }
             }
         })
-        if (!purchases) {
-            throw new NotFoundError("Purchases not found")
-        }
         return purchases
     },
 
@@ -38,9 +35,6 @@ export const purchaseService = {
                 }
             }
         })
-        if (!purchase) {
-            throw new NotFoundError("Purchase not found")
-        }
         return purchase
     },
 

@@ -36,10 +36,6 @@ export const saleService = {
             }
         })
 
-        if (!sale) {
-            throw new NotFoundError("Sale not found")
-        }
-
         return sale
 
     },

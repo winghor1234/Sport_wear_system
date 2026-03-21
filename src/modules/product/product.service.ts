@@ -15,9 +15,6 @@ export const productService = {
         images: true
       }
     })
-    if (!products) {
-      throw new NotFoundError("Products not found")
-    }
     return products
 
 
@@ -31,10 +28,6 @@ export const productService = {
         images: true
       }
     })
-
-    if (!product) {
-      throw new NotFoundError("Product not found")
-    }
 
     return product
 

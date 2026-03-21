@@ -1,4 +1,3 @@
-
 import { prisma } from "@/lib/prisma"
 import { comparePassword, hashPassword } from "@/utils/password"
 import { sendOTPEmail } from "@/utils/email"
@@ -42,7 +41,7 @@ export const authService = {
             }
         });
         if (!refreshTokenRecord) {
-            throw new Error("Failed to create refresh token");
+            throw new BadRequestError("Failed to create refresh token");
         }
 
         return {
@@ -58,23 +57,17 @@ export const authService = {
             where: { email: data.email }
         });
         if (!user) {
-            throw new UnauthorizedError("Invalid email or password");
+            throw new BadRequestError("Invalid email or password");
         }
         /* 🔒 CHECK ACCOUNT LOCK */
         if (user.lockUntil && user.lockUntil > new Date()) {
             throw new ForbiddenError("Account temporarily locked");
         }
-
-        const isPasswordValid = await comparePassword(
-            data.password,
-            user.password
-        );
+        const isPasswordValid = await comparePassword(data.password, user.password);
 
         /* ❌ PASSWORD WRONG */
         if (!isPasswordValid) {
-
             const attempts = user.failedLoginAttempts + 1;
-
             await prisma.customer.update({
                 where: { customer_id: user.customer_id },
                 data: {
@@ -90,7 +83,7 @@ export const authService = {
                 });
                 throw new ForbiddenError("Account locked for 15 minutes");
             }
-            throw new UnauthorizedError("Invalid email or password");
+            throw new BadRequestError("Invalid email or password");
         }
 
         /* ✅ LOGIN SUCCESS → RESET ATTEMPTS */
@@ -102,10 +95,8 @@ export const authService = {
                 lockUntil: null
             }
         });
-
         const accessToken = generateAccessToken(user.customer_id, user.role);
         const refreshToken = generateRefreshToken(user.customer_id);
-
         await prisma.refreshToken.create({
             data: {
                 token: refreshToken,
@@ -117,12 +108,7 @@ export const authService = {
                 }
             }
         });
-
-        return {
-            user,
-            accessToken,
-            refreshToken
-        };
+        return { user, accessToken, refreshToken };
 
     },
 
@@ -230,18 +216,14 @@ export const authService = {
     // --------------------------------------------------------------------------------
     // FORGOT PASSWORD
     async customerForgotPassword(email: string) {
-
         const user = await prisma.customer.findUnique({
             where: { email }
         });
-
         if (!user) {
             throw new NotFoundError("User not found");
         }
-
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-        await prisma.oTP.create({
+        const record = await prisma.oTP.create({
             data: {
                 email,
                 otp_code: otp,
@@ -249,6 +231,10 @@ export const authService = {
                 expiresAt: new Date(Date.now() + 5 * 60 * 1000)
             }
         });
+        if (!record) {
+            throw new BadRequestError("Failed to create OTP");
+        }
+        // send code to email
         sendOTPEmail(email, otp);
         return { message: "OTP sent" }
     },
@@ -268,20 +254,21 @@ export const authService = {
         }
 
         if (record.expiresAt < new Date()) {
-            throw new BadRequestError("OTP expired");
+            throw new UnauthorizedError("OTP expired");
         }
 
-        await prisma.oTP.update({
+        const result = await prisma.oTP.update({
             where: { otp_id: record.otp_id },
             data: { verified: true }
         });
-
+        if (!result) {
+            throw new BadRequestError("Failed to verify OTP");
+        }
         return true;
     },
 
     // RESET PASSWORD
     async customerResetPassword(email: string, password: string) {
-
         const otp = await prisma.oTP.findFirst({
             where: {
                 email,
@@ -293,35 +280,36 @@ export const authService = {
         });
 
         if (!otp) {
-            throw new UnauthorizedError("OTP verification required");
+            throw new BadRequestError("OTP verification required");
         }
         const hashed = await hashPassword(password);
-        await prisma.customer.update({
+        const result = await prisma.customer.update({
             where: { email },
             data: { password: hashed }
         });
-
+        if (!result) {
+            throw new BadRequestError("Failed to reset password");
+        }
         return true;
     },
 
     async customerLogout(customerId: string) {
-
-        await prisma.refreshToken.deleteMany({
+        const result = await prisma.refreshToken.deleteMany({
             where: {
                 customer_id: customerId
             }
         });
-
+        if (!result) {
+            throw new BadRequestError("Failed to logout");
+        }
         return true;
     },
 
     async refreshToken(token: string) {
-
         const storedToken = await prisma.refreshToken.findUnique({
             where: { token },
             include: { customer: true }
         });
-
         if (!storedToken) {
             throw new UnauthorizedError("Invalid refresh token");
         }
@@ -335,7 +323,6 @@ export const authService = {
         }
 
         const customer = storedToken.customer;
-
         const newAccessToken = generateAccessToken(
             customer.customer_id,
             customer.role
@@ -349,7 +336,7 @@ export const authService = {
             where: { token }
         });
 
-        await prisma.refreshToken.create({
+        const result = await prisma.refreshToken.create({
             data: {
                 token: newRefreshToken,
                 expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -360,6 +347,9 @@ export const authService = {
                 }
             }
         });
+        if (!result) {
+            throw new BadRequestError("Failed to create new refresh token");
+        }
 
         return {
             accessToken: newAccessToken,
@@ -370,10 +360,8 @@ export const authService = {
     // Admin and staff auth---------------------------------------------------------------------------------------------------
 
     async adminRegister(data: EmployeeRegisterInput) {
-
         const existingUser = await prisma.employee.findFirst({
             where: { phone: data.phone }
-
         });
 
         if (existingUser) {
@@ -388,6 +376,9 @@ export const authService = {
                 password: hashedPassword
             }
         });
+        if (!user) {
+            throw new BadRequestError("Failed to create user");
+        }
 
         const accessToken = generateAccessToken(user.employee_id, user.role);
         const refreshToken = generateRefreshToken(user.employee_id);
@@ -403,7 +394,7 @@ export const authService = {
             }
         });
         if (!refreshTokenRecord) {
-            throw new Error("Failed to create refresh token");
+            throw new BadRequestError("Failed to create refresh token");
         }
 
         return {
@@ -415,12 +406,11 @@ export const authService = {
     },
 
     async adminLogin(data: LoginInput) {
-
         const user = await prisma.employee.findUnique({
             where: { email: data.email }
         });
         if (!user) {
-            throw new UnauthorizedError("Invalid email or password");
+            throw new BadRequestError("Invalid email or password");
         }
 
         /* 🔒 CHECK ACCOUNT LOCK */
@@ -435,9 +425,7 @@ export const authService = {
 
         /* ❌ PASSWORD WRONG */
         if (!isPasswordValid) {
-
             const attempts = user.failedLoginAttempts + 1;
-
             await prisma.employee.update({
                 where: { employee_id: user.employee_id },
                 data: {
@@ -453,7 +441,7 @@ export const authService = {
                 });
                 throw new ForbiddenError("Account locked for 15 minutes");
             }
-            throw new UnauthorizedError("Invalid email or password");
+            throw new BadRequestError("Invalid email or password");
         }
         /* ✅ LOGIN SUCCESS → RESET ATTEMPTS */
 
@@ -466,7 +454,7 @@ export const authService = {
         })
         const accessToken = generateAccessToken(user.employee_id, user.role);
         const refreshToken = generateRefreshToken(user.employee_id);
-        await prisma.refreshToken.create({
+        const refreshTokenRecord = await prisma.refreshToken.create({
             data: {
                 token: refreshToken,
                 expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -477,6 +465,9 @@ export const authService = {
                 }
             }
         });
+        if (!refreshTokenRecord) {
+            throw new BadRequestError("Failed to create refresh token");
+        }
 
         return {
             user,
@@ -485,18 +476,14 @@ export const authService = {
         };
     },
     async adminForgotPassword(email: string) {
-
         const user = await prisma.employee.findUnique({
             where: { email }
         });
-
         if (!user) {
             throw new NotFoundError("User not found");
         }
-
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-        await prisma.oTP.create({
+       const result = await prisma.oTP.create({
             data: {
                 email,
                 otp_code: otp,
@@ -504,6 +491,10 @@ export const authService = {
                 expiresAt: new Date(Date.now() + 5 * 60 * 1000)
             }
         });
+        if (!result) {
+            throw new BadRequestError("Failed to create OTP");
+        }
+        // send code to email
         sendOTPEmail(email, otp);
         return { message: "OTP sent" }
     },
@@ -523,20 +514,22 @@ export const authService = {
         }
 
         if (record.expiresAt < new Date()) {
-            throw new BadRequestError("OTP expired");
+            throw new UnauthorizedError("OTP expired");
         }
 
-        await prisma.oTP.update({
+       const result = await prisma.oTP.update({
             where: { otp_id: record.otp_id },
             data: { verified: true }
         });
+        if (!result) {
+            throw new BadRequestError("Failed to verify OTP");
+        }
 
         return true;
     },
 
     // RESET PASSWORD
     async adminResetPassword(email: string, password: string) {
-
         const otp = await prisma.oTP.findFirst({
             where: {
                 email,
@@ -548,7 +541,7 @@ export const authService = {
         });
 
         if (!otp) {
-            throw new UnauthorizedError("OTP verification required");
+            throw new BadRequestError("OTP verification required");
         }
         const hashed = await hashPassword(password);
         await prisma.employee.update({
@@ -561,17 +554,19 @@ export const authService = {
 
     async adminLogout(customerId: string) {
 
-        await prisma.refreshToken.deleteMany({
+       const result = await prisma.refreshToken.deleteMany({
             where: {
                 customer_id: customerId
             }
         });
+        if (!result) {
+            throw new BadRequestError("Failed to logout");
+        }
 
         return true;
     },
 
     async adminRefreshToken(token: string) {
-
         const storedToken = await prisma.refreshToken.findUnique({
             where: { token },
             include: { employee: true }
@@ -582,20 +577,17 @@ export const authService = {
         }
 
         if (!storedToken.employee) {
-            throw new UnauthorizedError("Customer not found");
+            throw new NotFoundError("Customer not found");
         }
 
         if (storedToken.expiresAt < new Date()) {
             throw new UnauthorizedError("Refresh token expired");
         }
-
         const employee = storedToken.employee;
-
         const newAccessToken = generateAccessToken(
             employee.employee_id,
             employee.role
         );
-
         const newRefreshToken = generateRefreshToken(
             employee.employee_id
         );
@@ -604,7 +596,7 @@ export const authService = {
             where: { token }
         });
 
-        await prisma.refreshToken.create({
+       const refreshTokenRecord = await prisma.refreshToken.create({
             data: {
                 token: newRefreshToken,
                 expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -615,6 +607,9 @@ export const authService = {
                 }
             }
         });
+        if (!refreshTokenRecord) {
+            throw new BadRequestError("Failed to create refresh token");
+        }
 
         return {
             accessToken: newAccessToken,

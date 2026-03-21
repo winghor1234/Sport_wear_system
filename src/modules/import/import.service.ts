@@ -2,7 +2,7 @@
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { CreateImportInput } from "./import.type"
-import { BadRequestError, ForbiddenError, NotFoundError } from "@/utils/response"
+import { BadRequestError, NotFoundError } from "@/utils/response"
 
 export const importService = {
 
@@ -20,9 +20,6 @@ export const importService = {
                 }
             }
         })
-        if (!imports) {
-            throw new NotFoundError("Imports not found")
-        }
         return imports
 
     },
@@ -40,9 +37,6 @@ export const importService = {
                 }
             }
         })
-        if (!record) {
-            throw new NotFoundError("Import not found")
-        }
         return record
     },
 

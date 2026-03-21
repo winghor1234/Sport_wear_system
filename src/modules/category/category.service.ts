@@ -6,9 +6,6 @@ export const categoryService = {
 
   async getCategories(options?: Prisma.CategoryFindManyArgs) {
     const categories = await prisma.category.findMany(options);
-    if (!categories) {
-      throw new NotFoundError("Categories not found");
-    }
     return categories;
 
   },
@@ -17,9 +14,6 @@ export const categoryService = {
     const category = await prisma.category.findUnique({
       where: { category_id: id }
     })
-    if (!category) {
-      throw new NotFoundError("Category not found")
-    }
     return category
   },
 

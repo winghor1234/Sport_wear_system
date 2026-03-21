@@ -15,9 +15,6 @@ export const employeeService = {
                 sales: true
             }
         })
-        if (!employees) {
-            throw new NotFoundError("Employees not found")
-        }
         return employees
 
     },
@@ -32,9 +29,6 @@ export const employeeService = {
                 sales: true,
             }
         })
-        if (!employee) {
-            throw new NotFoundError("Employee not found")
-        }
         return employee
 
     },

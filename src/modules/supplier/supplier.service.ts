@@ -7,9 +7,6 @@ export const supplierService = {
 
     async getSuppliers(options?: Prisma.SupplierFindManyArgs) {
         const suppliers = await prisma.supplier.findMany(options)
-        if (!suppliers) {
-            throw new NotFoundError("Suppliers not found")
-        }
         return suppliers
     },
 
@@ -17,9 +14,6 @@ export const supplierService = {
         const supplier = await prisma.supplier.findUnique({
             where: { supplier_id: id }
         })
-        if (!supplier) {
-            throw new NotFoundError("Supplier not found")
-        }
         return supplier
     },
 
